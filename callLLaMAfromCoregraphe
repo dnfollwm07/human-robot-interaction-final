@@ -17,18 +17,18 @@ class MyClass(GeneratedClass):
         # Clean up code here (if needed)
         pass
 
-    def onInput_onStart(self):
+    def fetch_data(self):
         # LLaMA service URL
         llama_url = "http://192.168.1.22:8080/completion"  # Replace with correct URL
         headers = {"Content-Type": "application/json"}
         
         # Example prompt
-        prompt = "Hello!"
+        prompt = "Hi!"
 
         # Data for the POST request
         data = {
             "prompt": prompt,
-            "n_predict": 5,
+            "n_predict": 50,
             "temperature": 0.7,
             "top_k": 10,
             "top_p": 0.8
@@ -36,10 +36,9 @@ class MyClass(GeneratedClass):
 
         try:
             print("=====> 11111")
-            # Send POST request to LLaMA service
+            # Synchronously send the POST request
             response = requests.post(llama_url, headers=headers, data=json.dumps(data))
-            print("requests", json.dumps(data))
-            llama_response = response.json()
+            llama_response = response.json()  # Wait for response
             print("=====> 22222")
             print("LLaMA Response:", llama_response)
 
@@ -47,10 +46,11 @@ class MyClass(GeneratedClass):
             if 'content' in llama_response:
                 print('=====> 333333')
                 response_text = llama_response['content'].strip()
+                response_text = str(response_text)
                 print("=====> 444444:", response_text)
 
                 # Output the response text (pass to output slot)
-                self.response(response_text)
+                self.response(response_text)  # This is executed after the request completes
 
             else:
                 print("LLaMA did not return any text.")
@@ -61,6 +61,10 @@ class MyClass(GeneratedClass):
             self.response("Error calling LLaMA service")
 
         self.onStopped()  # Trigger the stop event to end the module
+
+    def onInput_onStart(self):
+        # Synchronously call fetch_data() and wait for the response
+        self.fetch_data()  # This will block until the request completes and response is set
 
     def onInput_onStop(self):
         self.onUnload()  # Clean up resources
