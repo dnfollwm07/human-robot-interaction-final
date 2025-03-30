@@ -2,9 +2,6 @@ from naoqi import ALProxy
 import requests
 import json
 
-ROBOT_IP = "192.168.1.25"  # NAO robot's IP
-PORT = 9559  # Port to connect to the NAO robot
-
 class MyClass(GeneratedClass):
     def __init__(self):
         GeneratedClass.__init__(self)
@@ -19,7 +16,7 @@ class MyClass(GeneratedClass):
 
     def fetch_data(self):
         # LLaMA service URL
-        llama_url = "http://192.168.1.22:8080/completion"  # Replace with correct URL
+        llama_url = "http://192.168.1.22:8080/completion"  # Replace with your computer ip
         headers = {"Content-Type": "application/json"}
         
         # Example prompt
