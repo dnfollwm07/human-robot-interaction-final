@@ -1,0 +1,55 @@
+from naoqi import ALProxy
+
+ROBOT_IP = "192.168.1.30"
+PORT = 9559
+
+class MyClass(GeneratedClass):
+    def __init__(self):
+        GeneratedClass.__init__(self)
+
+    def onLoad(self):
+        #put initialization code here
+        pass
+
+    def onUnload(self):
+        #put clean-up code here
+        pass
+
+    def onInput_onStart(self):
+
+      # 初始化代理
+        localization = ALProxy("ALLocalization", ROBOT_IP, PORT)
+        motion = ALProxy("ALMotion", ROBOT_IP, PORT)
+        navigation = ALProxy("ALNavigation", ROBOT_IP, PORT)
+        memory = ALProxy("ALMemory", ROBOT_IP, PORT)
+
+        # Step 1: 让机器人学习当前位置作为 home
+        print("Learning home position...")
+        localization.learnHome()
+        time.sleep(1)  # 可选，确保位置学习完成
+
+        # Step 2: 获取当前坐标作为 home
+        current_pose = localization.getRobotPosition(False)
+        memory.insertData("HomePosition", current_pose)
+        print("Home position set to:", current_pose)
+
+        # Step 3: 向前走一小段
+        print("Moving forward 0.3m...")
+        motion.moveTo(0.3, 0, 0)
+
+        # Step 4: 回到 home 位置
+        print("Returning to home...")
+        home = memory.getData("HomePosition")
+        if home:
+            x, y, theta = home
+            navigation.navigateToInMap([x, y, theta])
+            print("Navigated to:", home)
+        else:
+            print("Error: Home position not found in ALMemory")
+            
+        self.onStopped()
+
+
+    def onInput_onStop(self):
+        self.onUnload() #it is recommended to reuse the clean-up as the box is stopped
+        self.onStopped() #activate the output of the box
