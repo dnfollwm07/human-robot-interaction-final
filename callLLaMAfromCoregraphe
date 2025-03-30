@@ -1,0 +1,67 @@
+from naoqi import ALProxy
+import requests
+import json
+
+ROBOT_IP = "192.168.1.25"  # NAO robot's IP
+PORT = 9559  # Port to connect to the NAO robot
+
+class MyClass(GeneratedClass):
+    def __init__(self):
+        GeneratedClass.__init__(self)
+
+    def onLoad(self):
+        # Initialize any necessary code here (if needed)
+        pass
+
+    def onUnload(self):
+        # Clean up code here (if needed)
+        pass
+
+    def onInput_onStart(self):
+        # LLaMA service URL
+        llama_url = "http://192.168.1.22:8080/completion"  # Replace with correct URL
+        headers = {"Content-Type": "application/json"}
+        
+        # Example prompt
+        prompt = "Hello!"
+
+        # Data for the POST request
+        data = {
+            "prompt": prompt,
+            "n_predict": 5,
+            "temperature": 0.7,
+            "top_k": 10,
+            "top_p": 0.8
+        }
+
+        try:
+            print("=====> 11111")
+            # Send POST request to LLaMA service
+            response = requests.post(llama_url, headers=headers, data=json.dumps(data))
+            print("requests", json.dumps(data))
+            llama_response = response.json()
+            print("=====> 22222")
+            print("LLaMA Response:", llama_response)
+
+            # Check for 'content' key in response
+            if 'content' in llama_response:
+                print('=====> 333333')
+                response_text = llama_response['content'].strip()
+                print("=====> 444444:", response_text)
+
+                # Output the response text (pass to output slot)
+                self.response(response_text)
+
+            else:
+                print("LLaMA did not return any text.")
+                self.response("No text returned from LLaMA service.")
+        
+        except Exception as e:
+            print("Error calling LLaMA service:", e)
+            self.response("Error calling LLaMA service")
+
+        self.onStopped()  # Trigger the stop event to end the module
+
+    def onInput_onStop(self):
+        self.onUnload()  # Clean up resources
+        self.onStopped()  # Stop the module
