@@ -15,14 +15,6 @@ init_params = sl.InitParameters()
 if zed.open(init_params) != sl.ERROR_CODE.SUCCESS:
     exit(1)
 
-# Enable body tracking
-body_param = sl.BodyTrackingParameters()
-body_param.enable_body_fitting = True
-body_runtime_param = sl.BodyTrackingRuntimeParameters()
-obj_runtime_param = sl.ObjectDetectionRuntimeParameters()
-
-zed.enable_body_tracking(body_param)
-bodies = sl.Bodies()
 
 # Define exhibit zones (X-axis positions in camera space)
 EXHIBIT_ZONES = {
@@ -31,19 +23,19 @@ EXHIBIT_ZONES = {
     3: (0.5, 2.0)     # Exhibit 3 (right side)
 }
 
-while True:
-    if zed.grab() == sl.ERROR_CODE.SUCCESS:
-        zed.retrieve_bodies(bodies, body_runtime_param)
-        occupied_exhibits = set()
+# Capture 50 frames and stop
+i = 0
+image = sl.Mat()
+runtime_parameters = sl.RuntimeParameters()
+while i < 50:
+    # Grab an image, a RuntimeParameters object must be given to grab()
+    if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+        # A new image is available if grab() returns ERROR_CODE.SUCCESS
+        zed.retrieve_image(image, sl.VIEW.LEFT) # Get the left image
+        timestamp = zed.get_timestamp(sl.TIME_REFERENCE.IMAGE)  # Get the image timestamp
+        i = i + 1
 
-        for body in bodies.body_list:
-            x_pos = body.position[0]  # X-coordinate in world space
-
-            # Check which exhibit the person is in
-            for exhibit_id, (xmin, xmax) in EXHIBIT_ZONES.items():
-                if xmin < x_pos < xmax:
-                    occupied_exhibits.add(exhibit_id)
 
         # Send occupied exhibits to NAO
-        conn.sendall(",".join(map(str, occupied_exhibits)).encode() or "0")
-
+        message = ",".join(map(str, occupied_exhibits)).encode() if occupied_exhibits else b"0"
+        conn.sendall(message)
