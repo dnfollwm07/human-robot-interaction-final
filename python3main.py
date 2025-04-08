@@ -17,13 +17,6 @@ HOST = '0.0.0.0'
 DETECTION_PORT = 5001
 AUDIO_PORT = 5002
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind(("127.0.0.1", DETECTION_PORT))
-sock.listen(1)
-print("Waiting for NAO client...")
-conn, addr = sock.accept()
-print("NAO client connected!")
-
 # Initialize ZED camera
 zed = sl.Camera()
 init_params = sl.InitParameters()
