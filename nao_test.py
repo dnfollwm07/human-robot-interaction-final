@@ -1,21 +1,20 @@
+import os
 import socket
 from naoqi import ALProxy
 import time
 import math
+import sys
 
 # Connect to NAO
 ROBOT_IP = "192.168.1.25"
-PORT = 9559
+ROBOT_PORT = 9559
+FILENAME = "/home/nao/recordings/interaction.wav"
 
-try:
-    tts = ALProxy("ALTextToSpeech", ROBOT_IP, PORT)
-except Exception as e:
-    print("Error creating TTS proxy:", str(e))
+tts = ALProxy("ALTextToSpeech", ROBOT_IP, ROBOT_PORT)
+recorder = ALProxy("ALAudioRecorder", ROBOT_IP, ROBOT_PORT)
 
-
-# Connect to ZED body tracking server
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("127.0.0.1", 5001))
+DETECTION_PORT = 5001
+AUDIO_PORT = 5002
 
 prev_state = set()
 
@@ -24,21 +23,6 @@ EXHIBIT_MESSAGES = {
     "2": "Exhibit 2 is occupied.",
     "3": "Exhibit 3 is occupied."
 }
-
-# while True:
-#     data = sock.recv(1024).decode().strip()
-
-#     if data:
-#         occupied_exhibits = set(data.split(",")) if data != "0" else set()
-
-#         for exhibit_id in occupied_exhibits - prev_state:
-#             if exhibit_id in EXHIBIT_MESSAGES:
-#                 tts.say(EXHIBIT_MESSAGES[exhibit_id])
-
-#         for exhibit_id in prev_state - occupied_exhibits:
-#             tts.say("Thank you for visiting Exhibit" + exhibit_id)
-
-#         prev_state = occupied_exhibits
 
 
 # Detection for NAOMark ID and give voice feedback
@@ -126,12 +110,43 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
     motion.stopMove()
     print("Reached near the naomark.")
 
+# listens for metadata from python3main.py to see if any exhibits are occupied
+def listen_for_exhibit_status():
+    s = socket.socket()
+    s.bind(('0.0.0.0', DETECTION_PORT))
+    s.listen(1)
+    print("[Metadata] Listening on port", DETECTION_PORT)
+    conn, addr = s.accept()
+    with conn:
+        print("[Metadata] Connected from", addr)
+        data = conn.recv(1024) # Maybe a string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
+        print("[Metadata] Received:", data)
 
-def main():
-    result = detect_naomark(ROBOT_IP, PORT)
-    if result:
-        mark_id, alpha, beta, width, height = result
-        move_to_naomark(ROBOT_IP, PORT, alpha, beta, width)
+def listen_for_human_response(time_to_wait, filename):
+    try:
+        recorder.startMicrophonesRecording(filename, "wav", 16000, (1, 0, 0, 0))
+        time.sleep(time_to_wait)
+        recorder.stopMicrophonesRecording()
+    except Exception as e:
+        print(f"Error saving audio file: {str(e)}")
+        sys.exit(1)
+    with open(filename, 'rb') as f:
+        audio_data = f.read()
 
-if __name__ == "__main__":
-    main()
+    # receiving signal from start_server
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", AUDIO_PORT))
+    s.sendall(audio_data) # send to the data var in handle_audio
+    s.shutdown(socket.SHUT_WR)
+
+    # Listening for reply from handle_audio
+    response = s.recv(1024) # perhaps 1024 bytes is not enough for text from the llm
+    print("[Dialogue] Response:", response)
+    tts.say(response)
+    s.close()
+
+
+result = detect_naomark(ROBOT_IP, ROBOT_PORT)
+if result:
+    mark_id, alpha, beta, width, height = result
+    move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)

@@ -35,7 +35,7 @@ def transcribe_audio(audio_file):
         
         model = whisper.load_model("tiny", device=device)
         print("Converting speech to text...")
-        result = model.transcribe(audio_file, language="en")  # Specify English language for better accuracy
+        result = model.transcribe(os.getcwd() + "/" + audio_file, language="en")  # Specify English language for better accuracy
         return result["text"]
     except Exception as e:
         print(f"Error during speech conversion: {str(e)}")
@@ -57,4 +57,5 @@ def main():
     print(text)
 
 if __name__ == "__main__":
+    print(f"Current working directory: {os.getcwd()}")
     main()
