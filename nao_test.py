@@ -144,9 +144,8 @@ def get_llm_response(user_input):
 
         Your job is to:
         1. Introduce exhibits with imagination and charm
-        2. Answer visitors' questions about the museum
-        3. Guide them through exhibits interactively
-        4. Remain professional, engaging, and in character
+        2. Answer visitors' questions about the exhibits
+        3. Remain professional, engaging, and in character
 
         Tone:
         - Vivid, theatrical, and slightly mysterious
