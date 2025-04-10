@@ -1,9 +1,12 @@
 import os
 import socket
+
+from inaoqi import ALMemoryProxy
 from naoqi import ALProxy
 import time
 import math
 import sys
+import threading
 
 # Connect to NAO
 ROBOT_IP = "192.168.1.25"
@@ -12,6 +15,7 @@ FILENAME = "/home/nao/recordings/interaction.wav"
 
 tts = ALProxy("ALTextToSpeech", ROBOT_IP, ROBOT_PORT)
 recorder = ALProxy("ALAudioRecorder", ROBOT_IP, ROBOT_PORT)
+memory = ALProxy("ALMemory", ROBOT_IP, ROBOT_PORT)
 
 DETECTION_PORT = 5001
 AUDIO_PORT = 5002
@@ -123,30 +127,40 @@ def listen_for_exhibit_status():
         print("[Metadata] Received:", data)
 
 def listen_for_human_response(time_to_wait, filename):
-    try:
+    '''try:
+        print("Recording audio...")
         recorder.startMicrophonesRecording(filename, "wav", 16000, (1, 0, 0, 0))
         time.sleep(time_to_wait)
         recorder.stopMicrophonesRecording()
+        print("Audio recorded!")
+        print(memory.getDataListName())
+        memory.insertData("AudioRecording/lastfile", filename)
     except Exception as e:
-        print(f"Error saving audio file: {str(e)}")
+        print("Error saving audio file: " + str(e))
         sys.exit(1)
-    with open(filename, 'rb') as f:
-        audio_data = f.read()
+    audio_data = memory.getData("AudioRecording/lastfile")
+    print(audio_data)
 
     # receiving signal from start_server
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", AUDIO_PORT))
     s.sendall(audio_data) # send to the data var in handle_audio
-    s.shutdown(socket.SHUT_WR)
+    s.shutdown(socket.SHUT_WR)'''
 
     # Listening for reply from handle_audio
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", AUDIO_PORT))
     response = s.recv(1024) # perhaps 1024 bytes is not enough for text from the llm
     print("[Dialogue] Response:", response)
     tts.say(response)
     s.close()
 
+listen_for_human_response(3, FILENAME)
 
+#threading.Thread(target=listen_for_exhibit_status()).start()
+#threading.Thread(target=listen_for_human_response(3, FILENAME)).start()
+"""
 result = detect_naomark(ROBOT_IP, ROBOT_PORT)
 if result:
     mark_id, alpha, beta, width, height = result
-    move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)
+    move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)"""

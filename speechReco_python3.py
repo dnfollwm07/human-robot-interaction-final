@@ -19,6 +19,7 @@ def record_audio(seconds=3, fs=16000):  # Reduce recording time and sampling rat
 
 def save_audio(recording, fs, filename="output.wav"):
     try:
+        print(recording)
         write(filename, fs, recording)
         print(f"Recording completed, saved as {filename}")
         return filename
@@ -56,6 +57,6 @@ def main():
     print("\nConversion result:")
     print(text)
 
-if __name__ == "__main__":
+'''if __name__ == "__main__":
     print(f"Current working directory: {os.getcwd()}")
-    main()
+    main()'''

@@ -11,9 +11,10 @@ import sys
 import torch
 import threading
 import datetime
+import speechReco_python3
 
 # Setup socket
-HOST = '0.0.0.0'
+HOST = '127.0.0.1'
 DETECTION_PORT = 5001
 AUDIO_PORT = 5002
 
@@ -67,8 +68,7 @@ def zed_capture_image():
         print(f"An error occurred: {e}")
 
     finally:
-        print("Closing connection and camera")
-        conn.close()
+        print("Closing camera")
         zed.close()
 
 # === Metadata sender (Server ➝ NAO) ===
@@ -81,10 +81,18 @@ def send_exhibits_occupied_metadata():
 
 # === Dialogue handler (NAO ⇄ Server) ===
 def handle_audio(conn, audio_file):
-    print(f"[Dialogue] Connected from {addr}")
+    recording, fs = speechReco_python3.record_audio()
+    #print(f"[Dialogue] Connected")
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     filename = f"audio-{timestamp}.wav"
-    try:
+    data = speechReco_python3.save_audio(recording, fs, filename)
+    text = speechReco_python3.transcribe_audio(data)
+
+    print(text)
+    model_response = "Hello, I need your help, you need to kill me, I need to get out of here, please help me"
+    conn.sendall(model_response.encode('utf-8'))
+    conn.close()
+    '''try:
         # Receive audio
         with open(filename, 'wb') as f:
             while True:
@@ -102,8 +110,7 @@ def handle_audio(conn, audio_file):
 
         model = whisper.load_model("tiny", device=device)
         print("Converting speech to text...")
-        result = model.transcribe(os.getcwd() + "/" + audio_file,
-                                  language="en")  # Specify English language for better accuracy
+        result = model.transcribe(os.getcwd() + "/" + audio_file, language="en")  # Specify English language for better accuracy
         response_text = result["text"]
         print(f"[Dialogue] Transcribed: {response_text}")
 
@@ -115,7 +122,8 @@ def handle_audio(conn, audio_file):
         conn.close()
     except Exception as e:
         print(f"Error during speech conversion: {str(e)}")
-        sys.exit(1)
+        sys.exit(1)'''
+
 
 def start_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
