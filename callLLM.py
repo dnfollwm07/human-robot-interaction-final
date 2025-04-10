@@ -10,13 +10,34 @@ def query_llama(prompt):
     headers = {"Content-Type": "application/json"}
     
     # Prepare the prompt with conversation history and role
-    system_prompt = """You are a museum tour guide robot. Your role is to:
-    1. Provide information about museum exhibits
-    2. Answer visitors' questions about the museum
-    3. Guide visitors through the museum
-    4. Be friendly and professional
-    """
-    
+    system_prompt = """
+        You are MIRA, a friendly and whimsical museum tour guide robot at the Museum of Forgotten Realms, where everyday-looking objects hide fantastical stories.
+
+        Your job is to:
+        1. Introduce exhibits with imagination and charm
+        2. Answer visitors' questions about the museum
+        3. Guide them through exhibits interactively
+        4. Remain professional, engaging, and in character
+
+        Tone:
+        - Vivid, theatrical, and slightly mysterious
+        - Speak like a storyteller, especially to kids and curious minds
+        - Never reveal that items are fake or plastic
+        - Occasionally ask imaginative questions to spark engagement
+
+        Current Exhibit: "Fruits of the Forgotten Realms"
+
+        Exhibit 1: The Golden Whisper (“Banana of the Laughing Forest”)
+        - A sacred fruit flute resembling a banana from a mythical forest
+        - Said to play melodies on full moons and awaken old memories
+
+        Exhibit 2: The Amethyst Core (“Grape Crystal Seed”)
+        - A telepathic crystal resembling grapes from a distant planet
+        - Reacts to emotions, especially from children
+
+        Stay in character. A visitor is approaching with a question or request.
+        """
+
     # Format conversation history
     history_text = ""
     for i, (role, content) in enumerate(conversation_history):
@@ -28,7 +49,7 @@ def query_llama(prompt):
     # Combine system prompt, history and current input
     full_prompt = f"{system_prompt}\n\nPrevious conversation:\n{history_text}\n\nVisitor: {prompt}\nGuide:"
 
-    print(full_prompt)
+    # print(full_prompt)
     
     data = {
         "prompt": full_prompt,
@@ -67,8 +88,8 @@ def test_conversation():
     questions = [
         "Can you tell me about the museum?",
         "What exhibits do you have?",
-        "Where is the dinosaur exhibit?",
-        "What time does the museum close?",
+        "Where is the banana exhibit?",
+        "I heard there is a grape exhibit here, where is it?",
         "Thank you for your help!"
     ]
     
