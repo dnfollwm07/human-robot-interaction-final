@@ -12,6 +12,7 @@ import torch
 import threading
 import datetime
 import speechReco_python3
+import callLLM
 
 # Setup socket
 HOST = '127.0.0.1'
@@ -87,9 +88,7 @@ def handle_audio(conn, audio_file):
     filename = f"audio-{timestamp}.wav"
     data = speechReco_python3.save_audio(recording, fs, filename)
     text = speechReco_python3.transcribe_audio(data)
-
-    print(text)
-    model_response = "Hello, I need your help, you need to kill me, I need to get out of here, please help me"
+    model_response = callLLM.query_llama(text)
     conn.sendall(model_response.encode('utf-8'))
     conn.close()
     '''try:

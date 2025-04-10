@@ -6,7 +6,7 @@ import time
 conversation_history = []
 
 def query_llama(prompt):
-    url = "http://127.0.0.1:8080/completion"
+    url = "http://localhost:8080/completion"
     headers = {"Content-Type": "application/json"}
     
     # Prepare the prompt with conversation history and role
@@ -100,6 +100,3 @@ def test_conversation():
         response = query_llama(question)
         print(f"Guide: {response}\n")
         time.sleep(1)  # Add a small delay between questions
-
-if __name__ == "__main__":
-    test_conversation()
