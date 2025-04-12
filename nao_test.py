@@ -1,5 +1,6 @@
 import os
 import socket
+import random
 
 from inaoqi import ALMemoryProxy
 from naoqi import ALProxy
@@ -37,6 +38,33 @@ EXHIBIT_MESSAGES = {
     "3": "Exhibit 3 is occupied."
 }
 
+# Predefined responses for each exhibit
+EXHIBIT_RESPONSES = {
+    84: [  # Banana exhibit (The Golden Whisper)
+        "This magical banana is said to have been discovered in the heart of the Laughing Forest during a full moon.",
+        "Legend says that when the moonlight touches this banana, it plays melodies that can make even the oldest trees dance.",
+        "Children often gather around this exhibit during full moons, hoping to hear its mysterious music.",
+        "The Golden Whisper is believed to be over 1000 years old, yet it remains as fresh as the day it was found.",
+        "Some visitors claim they can hear faint laughter when they get very close to this magical fruit.",
+        "The banana's golden color is said to be a result of absorbing moonlight for centuries.",
+        "Many musicians have tried to replicate its sound, but none have succeeded in capturing its magical essence.",
+        "During special exhibitions, we sometimes play recordings of the banana's moonlight melodies.",
+        "The Laughing Forest, where this banana was found, is said to be a place where trees share stories through laughter.",
+        "This isn't just a banana - it's a piece of musical history that connects us to the magical world of the forest."
+    ],
+    80: [  # Grape exhibit (The Amethyst Core)
+        "The Amethyst Core is a unique crystal that responds to human emotions, especially those of children.",
+        "When you feel happy, this grape-like crystal glows with a warm purple light.",
+        "Scientists believe this crystal came from a distant planet where emotions manifest as colors.",
+        "Children often gather around this exhibit to see how their emotions affect the crystal's glow.",
+        "The crystal's amethyst color deepens when it senses strong emotions of wonder and curiosity.",
+        "Some visitors report feeling a gentle warmth when they touch the crystal with pure intentions.",
+        "The Amethyst Core has been known to glow brightest during school field trips.",
+        "This crystal is particularly sensitive to laughter and joy, responding with vibrant purple patterns.",
+        "The crystal's surface is covered in tiny facets that catch and reflect emotional energy.",
+        "Many children have drawn pictures of this crystal, each showing different colors based on their emotions."
+    ]
+}
 
 # Detection for NAOMark ID and give voice feedback
 def detect_naomark(robot_ip, port):
@@ -219,6 +247,16 @@ def get_llm_response(user_input):
         print(f"Error getting LLM response: {str(e)}")
         return "I'm sorry, I'm having trouble processing your request right now."
 
+def get_llm_response_temp(exhibit_id):
+    """
+    Returns a random predefined response for the given exhibit ID.
+    """
+    if exhibit_id not in EXHIBIT_RESPONSES:
+        return "I'm sorry, I don't have information about this exhibit."
+    
+    responses = EXHIBIT_RESPONSES[exhibit_id]
+    return random.choice(responses)
+
 def listen_for_human_response(time_to_wait, filename):
     '''try:
         print("Recording audio...")
@@ -247,7 +285,7 @@ def listen_for_human_response(time_to_wait, filename):
     print("[Dialogue] Response:", response)
     
     # Get LLM response
-    llm_response = get_llm_response(response.decode('utf-8'))
+    llm_response = get_llm_response_temp(response.decode('utf-8'))
     print("[Dialogue] LLM Response:", llm_response)
     
     # Speak the response
@@ -277,14 +315,14 @@ def main():
             # Listen for exhibit status and get LLM response
             listen_for_exhibit_status()
             # Get and speak LLM response
-            response = get_llm_response("")
+            response = get_llm_response_temp("")
             tts.say(response)
             
             # Step 8: Ask if they want to visit next exhibit
             tts.say("Do you want to visit the next exhibit?")
             # Listen for response
             listen_for_exhibit_status()
-            response = get_llm_response("")
+            response = get_llm_response_temp("")
             
             # Step 9-10: Check if they want to continue
             if "yes" in response.lower():
