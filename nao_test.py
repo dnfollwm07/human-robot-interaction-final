@@ -254,12 +254,46 @@ def listen_for_human_response(time_to_wait, filename):
     tts.say(llm_response)
     s.close()
 
-listen_for_human_response(3, FILENAME)
+def main():
+    while True:
+        # Step 1: Scan for NAO mark
+        result = detect_naomark(ROBOT_IP, ROBOT_PORT)
+        if not result:
+            print("No NAO mark detected. Please try again.")
+            continue
+            
+        # Step 2: Move to the detected NAO mark
+        mark_id, alpha, beta, width, height = result
+        move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)
+        
+        # Step 3: Give introduction
+        introduction_markid(mark_id)
+        
+        # Step 4: Ask for questions
+        tts.say("Do you have any questions for me?")
+        
+        # Step 5-7: Listen for questions and respond
+        while True:
+            # Listen for exhibit status and get LLM response
+            listen_for_exhibit_status()
+            # Get and speak LLM response
+            response = get_llm_response("")
+            tts.say(response)
+            
+            # Step 8: Ask if they want to visit next exhibit
+            tts.say("Do you want to visit the next exhibit?")
+            # Listen for response
+            listen_for_exhibit_status()
+            response = get_llm_response("")
+            
+            # Step 9-10: Check if they want to continue
+            if "yes" in response.lower():
+                break  # Continue to next exhibit
+            elif "no" in response.lower():
+                tts.say("Thanks for your visit today")
+                return  # End the program
+            else:
+                tts.say("I didn't understand. Please say yes or no.")
 
-#threading.Thread(target=listen_for_exhibit_status()).start()
-#threading.Thread(target=listen_for_human_response(3, FILENAME)).start()
-"""
-result = detect_naomark(ROBOT_IP, ROBOT_PORT)
-if result:
-    mark_id, alpha, beta, width, height = result
-    move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)"""
+if __name__ == "__main__":
+    main()
