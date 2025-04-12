@@ -82,14 +82,14 @@ def send_exhibits_occupied_metadata():
 
 # === Dialogue handler (NAO ⇄ Server) ===
 def handle_audio(conn, audio_file):
-    recording, fs = speechReco_python3.record_audio()
+    recording, fs = speechReco_python3.record_audio(5)
     #print(f"[Dialogue] Connected")
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     filename = f"audio-{timestamp}.wav"
     data = speechReco_python3.save_audio(recording, fs, filename)
     text = speechReco_python3.transcribe_audio(data)
-    model_response = callLLM.query_llama(text)
-    conn.sendall(model_response.encode('utf-8'))
+    #model_response = callLLM.query_llama(text)
+    conn.sendall(text.encode('utf-8'))
     conn.close()
     '''try:
         # Receive audio
