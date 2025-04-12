@@ -122,6 +122,16 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 
     motion.stopMove()
     print("Reached near the naomark.")
+    
+    
+# detect different naomark id and give different introduction for this exhibit
+def introduction_markid(mark_id):
+    # banana
+    if mark_id == 114:
+        tts.say("This is the Golden Whisper — a magical banana said to play music under the moonlight. Some say it once made a tree laugh for a whole year!")
+    # grape
+    elif mark_id == 117:
+        tts.say("Behold the Amethyst Core — a grape that glows when it feels your emotions. Kids say it giggles when you laugh!")
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
