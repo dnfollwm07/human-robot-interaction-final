@@ -237,7 +237,7 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 
     x = distance * math.cos(beta) * math.cos(alpha)
     y = distance * math.cos(beta) * math.sin(alpha)
-    theta = 0.0
+    theta = math.atan2(y, x)
     frequency = 0.1
 
     motion.moveToward(x, y, theta, [["Frequency", frequency]])
