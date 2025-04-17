@@ -276,54 +276,48 @@ def listen_for_exhibit_status():
         data = conn.recv(1024) # Maybe a string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
         print("[Metadata] Received:", data)
 
-# Get response from LLaMA model with conversation history
+# Get response from our Python 3 TinyLlama implementation
 def get_llm_response(user_input):
+    global conversation_history
+    
     try:
-        # Prepare the prompt with conversation history and role
-        system_prompt = ""
-        # Format conversation history
-        history_text = ""
-        for i, (role, content) in enumerate(conversation_history):
-            if role == "user":
-                history_text += "Visitor:" + content
-            else:
-                history_text += "Guide: " + content
+        # Use the optimized, concise system prompt
+        system_prompt = """You're a museum guide robot. Reply directly, concisely, and in-character to the visitor.
+Instructions:
+- Be brief but informative
+- Speak directly to the visitor
+- Don't label your speech with 'Guide:'
+- Don't describe actions/thoughts
+- End your response when you've answered the question
 
-        # Combine system prompt, history and current input
-        full_prompt = system_prompt + "Previous conversation: " + history_text + "\nVisitor: " + user_input + "\nGuide:"
+Exhibit 1: Golden Whisper - Magical banana playing music under moonlight
+Exhibit 2: Amethyst Core - Emotion-reactive glowing grape"""
 
-        data = {
-            "prompt": full_prompt,
-            "n_predict": 50,
-            "temperature": 0.7,
-            "top_k": 10,
-            "top_p": 0.8
-        }
-
-        # Send request to LLaMA
-        response = requests.post(LLAMA_URL, headers=LLAMA_HEADERS, data=json.dumps(data))
-        llama_response = response.json()
-
-        if 'content' in llama_response:
-            response_text = llama_response['content'].strip()
-
-            # Update conversation history
-            conversation_history.append(("user", user_input))
-            conversation_history.append(("assistant", response_text))
-
-            # Keep only last 5 exchanges to manage context length
-            if len(conversation_history) > 10:  # 5 exchanges (user + assistant)
-                conversation_history.pop(0)
-                conversation_history.pop(0)
-
-            return response_text
+        # Format conversation history - only use the latest exchange if available
+        if len(conversation_history) >= 2:
+            # Get just the most recent exchange
+            last_exchange = conversation_history[-2:]
+            history_text = "Visitor: " + last_exchange[0][1] + "\nGuide: " + last_exchange[1][1]
+            # Combine system prompt, history and current query
+            full_prompt = system_prompt + "\n\n" + history_text + "\n\nVisitor: " + user_input + "\nGuide:"
         else:
-            return "I'm sorry, I couldn't process your request properly."
-
+            # No history or just one message
+            full_prompt = system_prompt + "\n\nVisitor: " + user_input + "\nGuide:"
+        
+        # Print the prompt for debugging
+        print("[Debug] Sending prompt to TinyLlama: " + full_prompt[:100] + "...")
+        
+        # For now, we'll just add the user input to conversation history
+        # The Python 3 server will handle the LLM response
+        conversation_history.append(("user", user_input))
+        
+        # The response will be returned via listen_for_human_response
+        return full_prompt  # Return the prompt to be sent to Python 3 server
     except Exception as e:
-        print("Error getting LLM response: " + str(e))
+        print("Error preparing LLM request: " + str(e))
         return "I'm sorry, I'm having trouble processing your request right now."
 
+# Get predefined responses for demos/fallback
 def get_llm_response_temp(round_number, mark_id):
     """
     Returns a random predefined response for the given exhibit ID and round number.
@@ -334,36 +328,49 @@ def get_llm_response_temp(round_number, mark_id):
     responses = EXHIBIT_RESPONSES[mark_id][round_number]
     return random.choice(responses)
 
-def listen_for_human_response():
-    '''try:
-        print("Recording audio...")
-        recorder.startMicrophonesRecording(filename, "wav", 16000, (1, 0, 0, 0))
-        time.sleep(time_to_wait)
-        recorder.stopMicrophonesRecording()
-        print("Audio recorded!")
-        print(memory.getDataListName())
-        memory.insertData("AudioRecording/lastfile", filename)
-    except Exception as e:
-        print("Error saving audio file: " + str(e))
-        sys.exit(1)
-    audio_data = memory.getData("AudioRecording/lastfile")
-    print(audio_data)
-
-    # receiving signal from start_server
+def listen_for_human_response(prompt=None):
+    # Connect to Python 3 server to handle audio recording and transcription
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("127.0.0.1", AUDIO_PORT))
-    s.sendall(audio_data) # send to the data var in handle_audio
-    s.shutdown(socket.SHUT_WR)'''
-
-    # Listening for reply from handle_audio
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", AUDIO_PORT))
-    response = s.recv(1024) # perhaps 1024 bytes is not enough for text from the llm
-    print("[Dialogue] Response:", response)
+    
+    # If a prompt is provided, send it to the Python 3 server
+    if prompt:
+        # Send the prompt to the server for TinyLlama processing
+        s.sendall(prompt)
+    
+    # The Python 3 server will handle recording, transcription, and LLM processing
+    # Then it will send back the response
+    
+    # Receive the transcribed text or TinyLlama response
+    response = s.recv(4096)  # Increased buffer size for longer responses
+    print("[Dialogue] Response: " + response)
+    
+    # Clean up response
+    # Remove any "Guide:" prefix
+    if response.startswith("Guide:"):
+        response = response[6:].strip()
+    
+    # Remove quotation marks if the entire response is wrapped in them
+    if (response.startswith('"') and response.endswith('"')) or \
+       (response.startswith("'") and response.endswith("'")):
+        response = response[1:-1].strip()
+    
+    # Update conversation history with the assistant's response
+    if len(conversation_history) > 0 and conversation_history[-1][0] == "user":
+        conversation_history.append(("assistant", response))
+    
+    # Keep only last 2 exchanges (4 messages) to keep context minimal
+    if len(conversation_history) > 4:
+        conversation_history = conversation_history[-4:]
+    
     s.close()
     return response
 
 def main():
+    # Initialize the conversation history
+    global conversation_history
+    conversation_history = []
+    
     while True:
         motionProxy.wakeUp()
         postureProxy.goToPosture("StandInit", 0.5)
@@ -390,21 +397,21 @@ def main():
             recording = listen_for_human_response()
             if recording == "" or "nothing" in recording.lower():
                 break
-            # Get and speak LLM response
-            response = get_llm_response_temp(trial + 1, mark_id)
-            tts.say(response)
+            
+            # Step 6: Generate prompt for TinyLlama
+            llm_response = get_llm_response(human_question)
+            
+            # Step 8: Speak the response
+            tts.say(llm_response)
             trial += 1
 
-
-        # Step 8: Ask if they want to visit next exhibit
-        if len(detected_exhibit_ids) == len(TOTAL_EXHIBIT_IDS):
-            tts.say("You have viewed all of the museum. I hope you enjoyed your visit!")
-        else:
-            tts.say("Do you want to visit the next exhibit?")
-        # Listen for response
+        # Step 9: Ask if they want to visit next exhibit
+        tts.say("Do you want to visit the next exhibit?")
+        
+        # Step 10: Listen for response
         response = listen_for_human_response()
 
-        # Step 9-10: Check if they want to continue
+        # Step 11: Check if they want to continue
         if "yes" in response.lower():
             continue  # Continue to next exhibit
         elif "no" in response.lower():
