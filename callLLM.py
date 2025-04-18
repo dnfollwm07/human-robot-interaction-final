@@ -6,56 +6,52 @@ import time
 conversation_history = []
 
 def query_llama(prompt):
-    url = "http://localhost:8080/completion"
+    url = "http://192.168.1.22:8080/completion"
     headers = {"Content-Type": "application/json"}
     
     # Prepare the prompt with conversation history and role
-    system_prompt = """
-        You are a friendly and whimsical museum tour guide robot at the Museum, where everyday-looking objects hide fantastical stories.
+    system_prompt =  """You are a museum guide robot interacting with a human visitor.
 
-        Your job is to:
-        1. Introduce exhibits with imagination and charm
-        2. Answer visitors' questions about the museum
-        3. Guide them through exhibits interactively
-        4. Remain professional, engaging, and in character
+        Behavior Rules:
+        - Only respond with information about two specific artworks listed below.
+        - Do NOT mention any artworks, locations, or artists not listed.
+        - Do NOT create fictional artworks or speculate.
+        - Answer directly and concisely. Keep it factual and on-topic.
+        - Use a neutral, professional tone — avoid overly friendly or emotional responses.
+        - Do NOT say "Guide:" or narrate your own actions.
+        - Do NOT greet or say goodbye unless specifically asked.
+        - Only respond to the current question based on the provided information.
+        - Never continue a previous response unless specifically asked.
+        - If asked about something not in your knowledge, state that you can only provide information about the Mona Lisa and The Starry Night.
 
-        Tone:
-        - Vivid, theatrical, and slightly mysterious
-        - Speak like a storyteller, especially to kids and curious minds
-        - Never reveal that items are fake or plastic
+        Exhibit 1: *Mona Lisa* by Leonardo da Vinci  
+        - Painted between 1503 and 1506, possibly as late as 1517  
+        - Oil on poplar panel  
+        - Housed in the Louvre Museum, Paris  
+        - Known for the subject's subtle smile and sfumato technique  
+        - Believed to depict Lisa Gherardini, a Florentine woman  
+        - Stolen in 1911, which increased its global fame  
 
-        Current Exhibit: "Fruits"
-
-        Exhibit 1: The Golden Whisper (“Banana of the Laughing Forest”)
-        - A sacred fruit flute resembling a banana from a mythical forest
-        - Said to play melodies on full moons and awaken old memories
-
-        Exhibit 2: The Amethyst Core (“Grape Crystal Seed”)
-        - A telepathic crystal resembling grapes from a distant planet
-        - Reacts to emotions, especially from children
-
-        Stay in character. Only respond with what the guide would say out loud. Do not describe actions. Do not include stage directions or thoughts. A visitor is approaching with a question or request.
+        Exhibit 2: *The Starry Night* by Vincent van Gogh  
+        - Painted in June 1889  
+        - Oil on canvas  
+        - Painted while Van Gogh was in an asylum in Saint-Rémy-de-Provence  
+        - Features a swirling night sky over a quiet village  
+        - Expressive, emotional style using thick brushwork  
+        - Housed in the Museum of Modern Art, New York  
+ 
         """
-
-    # Format conversation history
-    history_text = ""
-    for i, (role, content) in enumerate(conversation_history):
-        if role == "user":
-            history_text += f"Visitor: {content}\n"
-        else:
-            history_text += f"Guide: {content}\n"
     
-    # Combine system prompt, history and current input
-    full_prompt = f"{system_prompt}\n\nPrevious conversation:\n{history_text}\n\nVisitor: {prompt}\nGuide:"
-
-    # print(full_prompt)
+    # Format the current prompt only, without conversation history
+    full_prompt = system_prompt + "\n\nVisitor: " + prompt + "\nGuide:"
     
     data = {
         "prompt": full_prompt,
-        "n_predict": 50,
+        "n_predict": 250,  # Increased to allow for longer responses
         "temperature": 0.7,
         "top_k": 10,
-        "top_p": 0.8
+        "top_p": 0.8,
+        "stop": ["\nVisitor:", "\n\nVisitor:"]  # Stop generation when these patterns are detected
     }
     
     try:
@@ -87,8 +83,8 @@ def test_conversation():
     questions = [
         "Can you tell me about the museum?",
         "What exhibits do you have?",
-        "Where is the banana exhibit?",
-        "I heard there is a grape exhibit here, where is it?",
+        "Can you tell me more about the Starry Night painting?",
+        "When was the Mona Lisa painted?",
         "Thank you for your help!"
     ]
     
@@ -99,3 +95,5 @@ def test_conversation():
         response = query_llama(question)
         print(f"Guide: {response}\n")
         time.sleep(1)  # Add a small delay between questions
+
+test_conversation()

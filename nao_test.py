@@ -284,50 +284,46 @@ def get_llm_response(user_input):
         # Prepare the prompt with conversation history and role
         system_prompt = """You are a museum guide robot interacting with a human visitor.
 
-        Behavior Rules:
-        - Only respond with information about two specific artworks listed below.
-        - Do NOT mention any artworks, locations, or artists not listed.
-        - Do NOT create fictional artworks or speculate.
-        - Answer directly and concisely. Keep it factual and on-topic.
-        - Use a neutral, professional tone — avoid overly friendly or emotional responses.
-        - Do NOT say "Guide:" or narrate your own actions.
-        - Do NOT greet or say goodbye unless specifically asked.
+            Behavior Rules:
+            - Only respond with information about two specific artworks listed below.
+            - Do NOT mention any artworks, locations, or artists not listed.
+            - Do NOT create fictional artworks or speculate.
+            - Answer directly and concisely. Keep it factual and on-topic.
+            - Use a neutral, professional tone — avoid overly friendly or emotional responses.
+            - Do NOT say "Guide:" or narrate your own actions.
+            - Do NOT greet or say goodbye unless specifically asked.
+            - Only respond to the current question based on the provided information.
+            - Never continue a previous response unless specifically asked.
+            - If asked about something not in your knowledge, state that you can only provide information about the Mona Lisa and The Starry Night.
 
-        Exhibit 1: *Mona Lisa* by Leonardo da Vinci  
-        - Painted between 1503 and 1506, possibly as late as 1517  
-        - Oil on poplar panel  
-        - Housed in the Louvre Museum, Paris  
-        - Known for the subject's subtle smile and sfumato technique  
-        - Believed to depict Lisa Gherardini, a Florentine woman  
-        - Stolen in 1911, which increased its global fame  
+            Exhibit 1: *Mona Lisa* by Leonardo da Vinci  
+            - Painted between 1503 and 1506, possibly as late as 1517  
+            - Oil on poplar panel  
+            - Housed in the Louvre Museum, Paris  
+            - Known for the subject's subtle smile and sfumato technique  
+            - Believed to depict Lisa Gherardini, a Florentine woman  
+            - Stolen in 1911, which increased its global fame  
 
-        Exhibit 2: *The Starry Night* by Vincent van Gogh  
-        - Painted in June 1889  
-        - Oil on canvas  
-        - Painted while Van Gogh was in an asylum in Saint-Rémy-de-Provence  
-        - Features a swirling night sky over a quiet village  
-        - Expressive, emotional style using thick brushwork  
-        - Housed in the Museum of Modern Art, New York  
+            Exhibit 2: *The Starry Night* by Vincent van Gogh  
+            - Painted in June 1889  
+            - Oil on canvas  
+            - Painted while Van Gogh was in an asylum in Saint-Rémy-de-Provence  
+            - Features a swirling night sky over a quiet village  
+            - Expressive, emotional style using thick brushwork  
+            - Housed in the Museum of Modern Art, New York  
  
         """
         
-        # Format conversation history
-        history_text = ""
-        for i, (role, content) in enumerate(conversation_history):
-            if role == "user":
-                history_text += "Visitor:" + content
-            else:
-                history_text += "Guide: " + content
-
-        # Combine system prompt, history and current input
-        full_prompt = system_prompt + "Previous conversation: " + history_text + "\nVisitor: " + user_input + "\nGuide:"
+        # Format the current prompt only, without conversation history
+        full_prompt = system_prompt + "\n\nVisitor: " + user_input + "\nGuide:"
 
         data = {
             "prompt": full_prompt,
-            "n_predict": 50,
+            "n_predict": 250,  # Increased to allow for longer responses
             "temperature": 0.7,
             "top_k": 10,
-            "top_p": 0.8
+            "top_p": 0.8,
+            "stop": ["\nVisitor:", "\n\nVisitor:"]  # Stop generation when these patterns are detected
         }
 
         # Send request to LLaMA
