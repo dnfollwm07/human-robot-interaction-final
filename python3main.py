@@ -35,6 +35,7 @@ runtime_parameters = sl.RuntimeParameters()
 model = YOLO("yolo11n.pt")
 
 def zed_capture_image(num_exhibits):
+    occupied_exhibits = "" #a string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
     try:
         # Grab a new frame
         if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
@@ -86,7 +87,10 @@ def zed_capture_image(num_exhibits):
                 )
 
                 if person_found:
+                    occupied_exhibits += "1"
                     print(f"Person detected in Exhibit {i + 1}")
+                else:
+                    occupied_exhibits += "0"
 
 
     except Exception as e:
@@ -95,19 +99,19 @@ def zed_capture_image(num_exhibits):
     finally:
         print("Closing camera")
         zed.close()
+        return occupied_exhibits
 
 # === Metadata sender (Server ➝ NAO) ===
-def send_exhibits_occupied_metadata():
-    is_occupied = "" # Maybe a string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
+def send_exhibits_occupied_metadata(occupied_exhibits):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect(("127.0.0.1", DETECTION_PORT))
-        s.sendall(is_occupied.encode('utf-8'))
-        print("[Metadata] Sent to NAO:", is_occupied)
+        s.sendall(occupied_exhibits.encode('utf-8'))
+        print("[Metadata] Sent to NAO:", occupied_exhibits)
 
 # === Dialogue handler (NAO ⇄ Server) ===
 def handle_audio(conn, audio_file):
     recording, fs = speechReco_python3.record_audio(5)
-    #print(f"[Dialogue] Connected")
+    print(f"[Dialogue] Connected")
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     filename = f"audio-{timestamp}.wav"
     data = speechReco_python3.save_audio(recording, fs, filename)

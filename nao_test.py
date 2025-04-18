@@ -42,6 +42,8 @@ EXHIBIT_MESSAGES = {
     "3": "Exhibit 3 is occupied."
 }
 
+occupied_exhibits = ""
+
 # Predefined responses for each exhibit
 EXHIBIT_RESPONSES = {
     84: {  # Banana exhibit (The Golden Whisper)
@@ -182,7 +184,7 @@ def detect_naomark(robot_ip, port):
     original_head_yaw = motionProxy.getAngles("HeadYaw", True)[0]
 
     # Define head yaw positions for scanning (side to side)
-    head_yaw_positions = [-1.5, -1.25, -1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5]  # radians
+    head_yaw_positions = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]  # radians
 
     # Sweep side to side
     for yaw in head_yaw_positions:
@@ -204,17 +206,17 @@ def detect_naomark(robot_ip, port):
                 height = markShapeInfo[4]
 
                 print("mark ID:", mark_id)
-                if mark_id == 84 and mark_id not in detected_exhibit_ids:
-                    tts.say("Here is the exhibit for the Golden Whisper")
-                elif mark_id == 80 and mark_id not in detected_exhibit_ids:
-                    tts.say("Here is the exhibit for the Amethyst Core")
+                if mark_id not in detected_exhibit_ids and str(mark_id) not in occupied_exhibits:
+                    if mark_id == 80:
+                        tts.say("This is exhibit 1")
+                    elif mark_id == 84:
+                        tts.say("This is exhibit 2")
+                    detected_exhibit_ids.append(mark_id)
+                    landMarkProxy.unsubscribe("Test_LandMark")
 
-                detected_exhibit_ids.append(mark_id)
-                landMarkProxy.unsubscribe("Test_LandMark")
-
-                # Reset head position
-                motionProxy.setAngles("HeadYaw", original_head_yaw, 0.2)
-                return mark_id, alpha, beta, width, height
+                    # Reset head position
+                    motionProxy.setAngles("HeadYaw", original_head_yaw, 0.2)
+                    return mark_id, alpha, beta, width, height
 
     landMarkProxy.unsubscribe("Test_LandMark")
     #tts.say("Time out, please try again")
@@ -223,9 +225,6 @@ def detect_naomark(robot_ip, port):
     # Reset head position
     motionProxy.setAngles("HeadYaw", original_head_yaw, 0.2)
     return None
-
-
-
 
 def move_to_naomark(robot_ip, port, alpha, beta, width):
     real_mark_size = 0.1  # meter
@@ -267,6 +266,7 @@ def introduction_markid(mark_id):
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
+    global occupied_exhibits
     s = socket.socket()
     s.bind(('0.0.0.0', DETECTION_PORT))
     s.listen(1)
@@ -275,8 +275,9 @@ def listen_for_exhibit_status():
     conn, addr = s.accept()
     with conn:
         print("[Metadata] Connected from", addr)
-        data = conn.recv(1024) # Maybe a string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
-        print("[Metadata] Received:", data)
+        occupied_exhibits = conn.recv(1024) # A string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
+        print("[Metadata] Received:", occupied_exhibits)
+
 
 # Get response from LLaMA model with conversation history
 def get_llm_response(user_input):
