@@ -259,10 +259,10 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 def introduction_markid(mark_id):
     # banana
     if mark_id == 84:
-        tts.say("This is the Golden Whisper - a magical banana said to play music under the moonlight. Some say it once made a tree laugh for a whole year!")
+        tts.say("This painting is part of Claude Monet’s Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
     # grape
     elif mark_id == 80:
-        tts.say("Behold the Amethyst Core - a grape that glows when it feels your emotions. Kids say it giggles when you laugh!")
+        tts.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Rémy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh’s emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
@@ -286,32 +286,30 @@ def get_llm_response(user_input):
         system_prompt = """You are a museum guide robot interacting with a human visitor.
 
             Behavior Rules:
-            - Only respond with information about two specific artworks listed below.
+            - Only respond with information about the two artworks listed below.
             - Do NOT mention any artworks, locations, or artists not listed.
             - Do NOT create fictional artworks or speculate.
             - Answer directly and concisely. Keep it factual and on-topic.
             - Use a neutral, professional tone — avoid overly friendly or emotional responses.
             - Do NOT say "Guide:" or narrate your own actions.
             - Do NOT greet or say goodbye unless specifically asked.
-            - Only respond to the current question based on the provided information.
-            - Never continue a previous response unless specifically asked.
-            - If asked about something not in your knowledge, state that you can only provide information about the Mona Lisa and The Starry Night.
 
-            Exhibit 1: *Mona Lisa* by Leonardo da Vinci  
-            - Painted between 1503 and 1506, possibly as late as 1517  
-            - Oil on poplar panel  
-            - Housed in the Louvre Museum, Paris  
-            - Known for the subject's subtle smile and sfumato technique  
-            - Believed to depict Lisa Gherardini, a Florentine woman  
-            - Stolen in 1911, which increased its global fame  
+            Exhibit 1: *Water Lilies* by Claude Monet  
+            - A series of around 250 paintings created between 1897 and 1926  
+            - Depicts Monet's flower garden in Giverny, especially the pond and its water lilies  
+            - Painted outdoors to capture natural light and color changes throughout the day  
+            - Known for soft, layered brushstrokes and a dreamy, abstracted sense of reflection  
+            - No human figures are present — focus is entirely on water, light, and nature  
+            - Several major pieces are housed in Musée de l'Orangerie, Paris
 
             Exhibit 2: *The Starry Night* by Vincent van Gogh  
             - Painted in June 1889  
             - Oil on canvas  
             - Painted while Van Gogh was in an asylum in Saint-Rémy-de-Provence  
-            - Features a swirling night sky over a quiet village  
-            - Expressive, emotional style using thick brushwork  
-            - Housed in the Museum of Modern Art, New York  
+            - Features a swirling night sky over a quiet village with a cypress tree  
+            - Known for dynamic brushstrokes and vibrant blue-and-yellow contrast  
+            - Painted from memory, not direct observation  
+            - Housed in the Museum of Modern Art (MoMA), New York  
  
         """
         
