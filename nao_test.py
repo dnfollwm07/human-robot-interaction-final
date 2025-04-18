@@ -182,11 +182,12 @@ def detect_naomark(robot_ip, port):
     original_head_yaw = motionProxy.getAngles("HeadYaw", True)[0]
 
     # Define head yaw positions for scanning (side to side)
-    head_yaw_positions = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]  # radians
+    head_yaw_positions = [-1.5, -1.25, -1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5]  # radians
 
     # Sweep side to side
     for yaw in head_yaw_positions:
-        motionProxy.setAngles("HeadYaw", yaw, 0.2)
+        motionProxy.setAngles("HeadYaw", yaw, 0.3)
+        motionProxy.setAngles("HeadPitch", 0.0, 0.2)
         time.sleep(1.5)  # Wait for head to reach position
         val = memoryProxy.getData("LandmarkDetected", 0)
 
@@ -204,9 +205,9 @@ def detect_naomark(robot_ip, port):
 
                 print("mark ID:", mark_id)
                 if mark_id == 84 and mark_id not in detected_exhibit_ids:
-                    tts.say("Detected the exhibit of the Golden Whisper")
+                    tts.say("Here is the exhibit for the Golden Whisper")
                 elif mark_id == 80 and mark_id not in detected_exhibit_ids:
-                    tts.say("Detected the exhibit of the Amethyst Core")
+                    tts.say("Here is the exhibit for the Amethyst Core")
 
                 detected_exhibit_ids.append(mark_id)
                 landMarkProxy.unsubscribe("Test_LandMark")
@@ -247,7 +248,7 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
         dx = current_pos[0] - start_pos[0]
         dy = current_pos[1] - start_pos[1]
         dist = math.hypot(dx, dy)
-        if dist >= 0.3:
+        if dist >= 0.5:
             break
     time.sleep(0.1)
 
@@ -269,6 +270,7 @@ def listen_for_exhibit_status():
     s = socket.socket()
     s.bind(('0.0.0.0', DETECTION_PORT))
     s.listen(1)
+
     print("[Metadata] Listening on port", DETECTION_PORT)
     conn, addr = s.accept()
     with conn:
@@ -364,9 +366,11 @@ def listen_for_human_response():
     return response
 
 def main():
+    tts.say("Hello! Welcome to my museum! Allow me to show you around!")
     while True:
         motionProxy.wakeUp()
         postureProxy.goToPosture("StandInit", 0.5)
+
         # Step 1: Scan for NAO mark
         result = detect_naomark(ROBOT_IP, ROBOT_PORT)
         if not result:

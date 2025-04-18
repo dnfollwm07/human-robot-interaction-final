@@ -13,6 +13,7 @@ import threading
 import datetime
 import speechReco_python3
 import callLLM
+from ultralytics import YOLO
 
 # Setup socket
 HOST = '127.0.0.1'
@@ -30,7 +31,10 @@ if zed.open(init_params) != sl.ERROR_CODE.SUCCESS:
 image = sl.Mat()
 runtime_parameters = sl.RuntimeParameters()
 
-def zed_capture_image():
+# YOLO11 training image detection
+model = YOLO("yolo11n.pt")
+
+def zed_capture_image(num_exhibits):
     try:
         # Grab a new frame
         if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
@@ -48,21 +52,41 @@ def zed_capture_image():
             # Optionally convert BGRA to BGR if your receiver expects that
             frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
 
-            # Encode the frame as JPEG
-            ret, buffer = cv2.imencode('.jpg', frame)
-            if not ret:
-                print("Image encoding failed")
-                return
-            """data = buffer.tobytes()
+            # Save the frame
+            filename = "exhibit_detection/exhibits.jpg"
+            cv2.imwrite(filename, frame)
+            print("Image saved!")
 
-            # Send a 4-byte header with the length of the image data
-            size = len(data)
-            conn.sendall(size.to_bytes(4, byteorder='big'))
+            # Perform object detection on an image
+            img = cv2.imread(filename)
+            results = model(img)  # Predict on an image
 
-            # Send the actual image data
-            conn.sendall(data)
+            # Split and save vertical sections
+            img = cv2.imread(filename)
+            height, width, _ = img.shape
+            section_width = width // num_exhibits
+            for i in range(num_exhibits):
+                start_x = i * section_width
+                end_x = (i + 1) * section_width if i < num_exhibits - 1 else width
+                section = img[:, start_x:end_x]
 
-            print(f"Sent image of {size} bytes")"""
+                section_filename = f"exhibit_detection/exhibit_section_{i + 1}.jpg"
+                cv2.imwrite(section_filename, section)
+                print(f"Saved section {i + 1} to {section_filename}")
+
+            # check if each region is occupied by a person or not
+            for i in range(num_exhibits):
+                section_filename = f"exhibit_detection/exhibit_section_{i + 1}.jpg"
+                section_img = cv2.imread(section_filename)
+                results = model(section_img)
+
+                person_found = any(
+                    model.names[int(box.cls[0])] == "person" and float(box.conf[0]) > 0.5
+                    for result in results for box in result.boxes
+                )
+
+                if person_found:
+                    print(f"Person detected in Exhibit {i + 1}")
 
 
     except Exception as e:
@@ -123,7 +147,7 @@ def handle_audio(conn, audio_file):
         print(f"Error during speech conversion: {str(e)}")
         sys.exit(1)'''
 
-
+'''
 def start_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, AUDIO_PORT))
@@ -135,4 +159,6 @@ def start_server():
 
 
 if __name__ == "__main__":
-    threading.Thread(target=start_server).start()
+    threading.Thread(target=start_server).start()'''
+
+zed_capture_image(2)
