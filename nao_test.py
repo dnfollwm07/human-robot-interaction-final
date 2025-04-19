@@ -299,39 +299,43 @@ def listen_for_exhibit_status():
 
 
 # Get response from LLaMA model with conversation history
-def get_llm_response(user_input, use_history=True):
+def get_llm_response(user_input, mark_id):
     try:
         # Prepare the prompt with conversation history and role
         system_prompt = """You are a museum guide robot interacting with a human visitor.
 
             Behavior Rules:
-            - Only respond with information about the two artworks listed below.
+            - Only respond with information about the artwork listed below.
             - Do NOT mention any artworks, locations, or artists not listed.
             - Do NOT create anything fictional or speculate.
             - Answer directly and concisely. Keep it factual and on-topic.
             - Use a neutral, professional tone - avoid overly friendly or emotional responses.
             - Do NOT say "Guide:" or narrate your own actions.
             - Do NOT greet or say goodbye unless specifically asked.
-            - Respond with plain text. 
+            - Respond with plain text and form a paragraph. 
             - Do NOT use special/unicode characters in your response.
-
-            Exhibit 1: *Water Lilies* by Claude Monet  
-            - A series of around 250 paintings created between 1897 and 1926  
-            - Depicts Monet's flower garden in Giverny, especially the pond and its water lilies  
-            - Painted outdoors to capture natural light and color changes throughout the day  
-            - Known for soft, layered brushstrokes and a dreamy, abstracted sense of reflection  
-            - No human figures are present - focus is entirely on water, light, and nature  
-
-            Exhibit 2: *The Starry Night* by Vincent van Gogh  
-            - Painted in June 1889  
-            - Oil on canvas  
-            - Painted while Van Gogh was in an asylum in Saint-Remy-de-Provence  
-            - Features a swirling night sky over a quiet village with a cypress tree  
-            - Known for dynamic brushstrokes and vibrant blue-and-yellow contrast  
-            - Painted from memory, not direct observation  
- 
         """
-        
+
+        if mark_id == 80:
+            system_prompt += """
+                Exhibit: *The Starry Night* by Vincent van Gogh  
+                - Painted in June 1889  
+                - Oil on canvas  
+                - Painted while Van Gogh was in an asylum in Saint-Remy-de-Provence  
+                - Features a swirling night sky over a quiet village with a cypress tree  
+                - Known for dynamic brushstrokes and vibrant blue-and-yellow contrast  
+                - Painted from memory, not direct observation
+            """
+        elif mark_id == 84:
+            system_prompt += """
+                Exhibit: *Water Lilies* by Claude Monet  
+                - A series of around 250 paintings created between 1897 and 1926  
+                - Depicts Monet's flower garden in Giverny, especially the pond and its water lilies  
+                - Painted outdoors to capture natural light and color changes throughout the day  
+                - Known for soft, layered brushstrokes and a dreamy, abstracted sense of reflection  
+                - No human figures are present - focus is entirely on water, light, and nature  
+            """
+
         # Format the current prompt only, without conversation history
         full_prompt = system_prompt + "\n\nVisitor: " + user_input + "\nGuide:" if use_history else user_input
 
@@ -496,7 +500,7 @@ def main():
         
         # Step 3: Give introduction
         motionProxy.moveTo(0, 0, 3.14)
-        introduction_markid(80)
+        introduction_markid(mark_id)
         
         # Step 4: Ask for questions
         life.setState("solitary")
@@ -533,7 +537,7 @@ def main():
                 break
             # Get and speak LLM response
             # response = get_llm_response_temp(trial + 1, mark_id)
-            response = get_llm_response(recording)
+            response = get_llm_response(recording, mark_id)
             tts.say(response)
             trial += 1
 
