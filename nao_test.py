@@ -30,6 +30,9 @@ landMarkProxy = ALProxy("ALLandMarkDetection", ROBOT_IP, ROBOT_PORT)
 memoryProxy = ALProxy("ALMemory", ROBOT_IP, ROBOT_PORT)
 motionProxy = ALProxy("ALMotion", ROBOT_IP, ROBOT_PORT)
 postureProxy = ALProxy("ALRobotPosture", ROBOT_IP, ROBOT_PORT)
+life = ALProxy("ALAutonomousLife", ROBOT_IP, ROBOT_PORT)
+emotion_proxy = ALProxy("ALMood", ROBOT_IP, ROBOT_PORT)
+life.setState("disabled")
 
 DETECTION_PORT = 5001
 AUDIO_PORT = 5002
@@ -192,6 +195,8 @@ def detect_naomark(robot_ip, port):
         motionProxy.setAngles("HeadPitch", 0.0, 0.2)
         time.sleep(1.5)  # Wait for head to reach position
         val = memoryProxy.getData("LandmarkDetected", 0)
+        detected_yaw = yaw
+        print("detected yaw = ", detected_yaw)
 
         if val and isinstance(val, list) and len(val) >= 2:
             markInfoArray = val[1]
@@ -200,17 +205,20 @@ def detect_naomark(robot_ip, port):
                 markShapeInfo = markInfo[0]
                 markExtraInfo = markInfo[1]
                 mark_id = markExtraInfo[0]
-                alpha = markShapeInfo[1]
+                # alpha = markShapeInfo[1]
+                alpha = detected_yaw
                 beta = markShapeInfo[2]
                 width = markShapeInfo[3]
                 height = markShapeInfo[4]
 
+                print("alpha origin = ", markShapeInfo[1])
+
                 print("mark ID:", mark_id)
                 if mark_id not in detected_exhibit_ids and str(mark_id) not in occupied_exhibits:
                     if mark_id == 80:
-                        tts.say("This is exhibit 1")
+                        tts.say("Let's check out the Van Gogh!")
                     elif mark_id == 84:
-                        tts.say("This is exhibit 2")
+                        tts.say("Why don't we go to the Monet?")
                     detected_exhibit_ids.append(mark_id)
                     landMarkProxy.unsubscribe("Test_LandMark")
 
@@ -235,19 +243,23 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 
     start_pos = motion.getRobotPosition(False)
 
+    motion.moveTo(0,0,alpha)
     x = distance * math.cos(beta) * math.cos(alpha)
-    y = distance * math.cos(beta) * math.sin(alpha)
-    theta = math.atan2(y, x)
+    # y = distance * math.cos(beta) * math.sin(alpha)
+    # theta = math.atan2(y, x)
+    y = 0
+    theta = 0
+    print(x, y, theta)
     frequency = 0.1
 
-    motion.moveToward(x, y, theta, [["Frequency", frequency]])
+    motion.moveTo(x * 0.6, y, theta)#, [["Frequency", frequency]])
 
     while True:
         current_pos = motion.getRobotPosition(False)
         dx = current_pos[0] - start_pos[0]
         dy = current_pos[1] - start_pos[1]
         dist = math.hypot(dx, dy)
-        if dist >= 0.5:
+        if dist >= 0.4:
             break
     time.sleep(0.1)
 
@@ -259,10 +271,13 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 def introduction_markid(mark_id):
     # banana
     if mark_id == 84:
-        tts.say("This painting is part of Claude Monet’s Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
+        tts.say("Test 1 text!!!!!")
+        #tts.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
+
     # grape
     elif mark_id == 80:
-        tts.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Rémy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh’s emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
+        tts.say("Test 2 text!!!!!")
+        #tts.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
@@ -290,7 +305,7 @@ def get_llm_response(user_input):
             - Do NOT mention any artworks, locations, or artists not listed.
             - Do NOT create fictional artworks or speculate.
             - Answer directly and concisely. Keep it factual and on-topic.
-            - Use a neutral, professional tone — avoid overly friendly or emotional responses.
+            - Use a neutral, professional tone - avoid overly friendly or emotional responses.
             - Do NOT say "Guide:" or narrate your own actions.
             - Do NOT greet or say goodbye unless specifically asked.
 
@@ -299,13 +314,13 @@ def get_llm_response(user_input):
             - Depicts Monet's flower garden in Giverny, especially the pond and its water lilies  
             - Painted outdoors to capture natural light and color changes throughout the day  
             - Known for soft, layered brushstrokes and a dreamy, abstracted sense of reflection  
-            - No human figures are present — focus is entirely on water, light, and nature  
-            - Several major pieces are housed in Musée de l'Orangerie, Paris
+            - No human figures are present - focus is entirely on water, light, and nature  
+            - Several major pieces are housed in Musee de l'Orangerie, Paris
 
             Exhibit 2: *The Starry Night* by Vincent van Gogh  
             - Painted in June 1889  
             - Oil on canvas  
-            - Painted while Van Gogh was in an asylum in Saint-Rémy-de-Provence  
+            - Painted while Van Gogh was in an asylum in Saint-Remy-de-Provence  
             - Features a swirling night sky over a quiet village with a cypress tree  
             - Known for dynamic brushstrokes and vibrant blue-and-yellow contrast  
             - Painted from memory, not direct observation  
@@ -388,6 +403,42 @@ def listen_for_human_response():
     s.close()
     return response
 
+def tracker_face(robot_ip, port, tracking_duration=10):
+    valence = 0.0
+    attention = 0.0
+    tracker = ALProxy("ALTracker", robot_ip, port)
+    motion = ALProxy("ALMotion", robot_ip, port)
+
+    motion.setAngles("HeadPitch", -0.5, 0.2)
+    tracker.registerTarget("Face", 0.1)
+    motion.setStiffnesses("Head",1.0)
+
+    tracker.track("Face")
+    print("start tracking")
+
+    try:
+        while True:
+            time.sleep(1)
+            if tracker.isNewTargetDetected():
+                tts.say("new target detected")
+                emotion_data = emotion_proxy.currentPersonState()  # dict
+                valence = emotion_data[0][1][0][1]
+                attention = emotion_data[1][1][0][1]
+
+                print(valence, attention)
+                break
+
+    except KeyboardInterrupt:
+        print
+        print "Interrupted by user"
+        print "Stopping..."
+
+    tracker.stopTracker()
+    tracker.unregisterAllTargets()
+    print("stop tracking")
+    motion.setStiffnesses("Head",0.0)
+    return valence, attention
+
 def main():
     tts.say("Hello! Welcome to my museum! Allow me to show you around!")
     while True:
@@ -408,7 +459,18 @@ def main():
         introduction_markid(mark_id)
         
         # Step 4: Ask for questions
+        life.setState("solitary")
+        time.sleep(2)
+        valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
         tts.say("Please feel free to ask any questions! If you have no questions, please say nothing. ")
+
+        if valence >= 0.1:
+            tts.say("You look quite interested in this exhibit! I'll explain to you some more history about this painting.")
+
+        elif valence < 0.1 and valence > -0.1:
+            tts.say("If you have any questions, please feel free.")
+        else:
+            tts.say("You don't look very interested in this painting. Would you like to move on or end the showcase now?")
 
         # Step 5-7: Listen for questions and respond
         trial = 0

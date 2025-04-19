@@ -12,7 +12,7 @@ import torch
 import threading
 import datetime
 import speechReco_python3
-import callLLM
+#import callLLM
 from ultralytics import YOLO
 
 # Setup socket
@@ -151,7 +151,7 @@ def handle_audio(conn, audio_file):
         print(f"Error during speech conversion: {str(e)}")
         sys.exit(1)'''
 
-'''
+
 def start_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, AUDIO_PORT))
@@ -163,6 +163,5 @@ def start_server():
 
 
 if __name__ == "__main__":
-    threading.Thread(target=start_server).start()'''
+    threading.Thread(target=start_server).start()
 
-zed_capture_image(2)
