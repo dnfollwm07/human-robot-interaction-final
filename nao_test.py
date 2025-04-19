@@ -404,28 +404,63 @@ def listen_for_human_response():
     return response
 
 def tracker_face(robot_ip, port, tracking_duration=10):
+    # Save original head positions to reset later
+    original_head_yaw = motionProxy.getAngles("HeadYaw", True)[0]
+    original_head_pitch = motionProxy.getAngles("HeadPitch", True)[0]
+    
     valence = 0.0
     attention = 0.0
     tracker = ALProxy("ALTracker", robot_ip, port)
     motion = ALProxy("ALMotion", robot_ip, port)
 
-    motion.setAngles("HeadPitch", -0.5, 0.2)
-    tracker.registerTarget("Face", 0.1)
-    motion.setStiffnesses("Head",1.0)
+    # Define head scanning positions
+    head_yaw_positions = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]  # radians
+    head_pitch_positions = [-0.5, -0.25, 0.0]  # radians, looking slightly up to straight
 
+    motion.setStiffnesses("Head", 1.0)
+    tracker.registerTarget("Face", 0.1)
+    print("Starting face scan...")
+    
+    # Scan for faces by moving head
+    face_detected = False
+    for pitch in head_pitch_positions:
+        if face_detected:
+            break
+        for yaw in head_yaw_positions:
+            motion.setAngles("HeadYaw", yaw, 0.3)
+            motion.setAngles("HeadPitch", pitch, 0.2)
+            time.sleep(1.0)  # Wait for head to reach position
+            
+            # Check if face is detected
+            if tracker.isTargetLost() == False:
+                print("Face detected at yaw:", yaw, "pitch:", pitch)
+                face_detected = True
+                break
+    
+    # If no face detected after scanning
+    if not face_detected:
+        print("No face detected during scan")
+        tracker.stopTracker()
+        tracker.unregisterAllTargets()
+        # Reset head position
+        motion.setAngles("HeadYaw", original_head_yaw, 0.2)
+        motion.setAngles("HeadPitch", original_head_pitch, 0.2)
+        motion.setStiffnesses("Head", 0.0)
+        return valence, attention
+    
+    # Start tracking the detected face
     tracker.track("Face")
-    print("start tracking")
+    print("Start tracking face")
 
     try:
         while True:
             time.sleep(1)
             if tracker.isNewTargetDetected():
-                tts.say("new target detected")
+                tts.say("New target detected")
                 emotion_data = emotion_proxy.currentPersonState()  # dict
                 valence = emotion_data[0][1][0][1]
                 attention = emotion_data[1][1][0][1]
-
-                print(valence, attention)
+                print("Valence:", valence, "Attention:", attention)
                 break
 
     except KeyboardInterrupt:
@@ -435,8 +470,8 @@ def tracker_face(robot_ip, port, tracking_duration=10):
 
     tracker.stopTracker()
     tracker.unregisterAllTargets()
-    print("stop tracking")
-    motion.setStiffnesses("Head",0.0)
+    print("Stop tracking")
+    
     return valence, attention
 
 def main():
