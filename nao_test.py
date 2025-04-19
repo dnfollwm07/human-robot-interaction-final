@@ -33,6 +33,7 @@ motionProxy = ALProxy("ALMotion", ROBOT_IP, ROBOT_PORT)
 postureProxy = ALProxy("ALRobotPosture", ROBOT_IP, ROBOT_PORT)
 life = ALProxy("ALAutonomousLife", ROBOT_IP, ROBOT_PORT)
 emotion_proxy = ALProxy("ALMood", ROBOT_IP, ROBOT_PORT)
+localization = ALProxy("ALLocalization", ROBOT_IP, ROBOT_PORT)
 
 life.setState("disabled")
 
@@ -482,7 +483,38 @@ def tracker_face(robot_ip, port, tracking_duration=10):
     
     return valence, attention
 
+def set_home_position():
+    localization.learnHome()
+    time.sleep(1)
+    try:
+        current_pose = localization.getRobotPosition(False)
+        memory.insertData("HomePosition", current_pose)
+        print("Home position set to:", current_pose)
+        return True
+    except Exception as e:
+        print("Error setting home position:", e)
+        return False
+
+def navigate_to_home():
+    """Navigate the robot back to its home position."""
+    home = memory.getData("HomePosition")
+    if home:
+        x, y, theta = home
+        try:
+            navigation.navigateToInMap([x, y, theta])
+            print("Navigated to home:", home)
+            return True
+        except Exception as e:
+            print("Error navigating to home position:", e)
+            return False
+    else:
+        print("No home position is set")
+        return False
+
 def main():
+    # Initialize Location
+    set_home_position()
+    
     global occupied_exhibits
     #tts.say("Hello! Welcome to my museum! Allow me to show you around!")
     while True:
@@ -557,6 +589,8 @@ def main():
                 break
             elif end:
                 tts.say("Thanks for your visit today! Have a great rest of your day.")
+                # Navigate to home
+                navigate_to_home()
                 return
             else:
                 tts.say("I didn't understand. Please ask a question!")
