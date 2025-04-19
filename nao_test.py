@@ -217,9 +217,9 @@ def detect_naomark(robot_ip, port):
 
                 print("mark ID:", mark_id)
                 if mark_id not in detected_exhibit_ids and str(mark_id) not in occupied_exhibits:
-                    if mark_id == 80:
+                    if mark_id == 80 and occupied_exhibits[0] == '0':
                         tts.say("Let's check out the Van Gogh!")
-                    elif mark_id == 84:
+                    elif mark_id == 84 and occupied_exhibits[1] == '0':
                         tts.say("Why don't we go to the Monet?")
                     detected_exhibit_ids.append(mark_id)
                     landMarkProxy.unsubscribe("Test_LandMark")
@@ -274,14 +274,20 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 # detect different naomark id and give different introduction for this exhibit
 def introduction_markid(mark_id):
     # banana
+
+
     if mark_id == 84:
-        #tts.say("Test 1 text!!!!!")
-        tts.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
+        tts.post.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
 
     # grape
     elif mark_id == 80:
-        tts.say("This is Starry Night. Blah blah blah blah.")
+        tts.post.say("This is Starry Night. Blah blah blah blah.")
         #.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
+
+    life.setState("solitary")
+    time.sleep(2)
+    valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
+    return attention
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
@@ -498,23 +504,29 @@ def main():
         introduction_markid(mark_id)
         
         # Step 4: Ask for questions
-        life.setState("solitary")
-        time.sleep(2)
-        valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
-        #tts.say("Please feel free to ask any questions! If you have no questions, please say nothing. ")
 
-        if valence >= 0.1:
-            tts.post.say("You look quite interested in this exhibit! I'll explain to you some more history about this painting.")
+
+        if attention >= 0.1:
+            tts.say("You look quite interested in this exhibit! I'll explain to you some more history about this "
+                         "painting.")
             if mark_id == 80:
-                tts.say("The Starry Night shows Van Gogh’s early move toward expressionism, using bold forms to convey emotion rather than realism. The cypress tree, not seen from his window, was added from imagination and often symbolizes eternity. Though now iconic, Van Gogh didn’t think highly of the painting and called it a “failure” in a letter to his brother.")
+                tts.say("The Starry Night shows Van Gogh's early move toward expressionism, using bold forms to "
+                        "convey emotion rather than realism. The cypress tree, not seen from his window, "
+                        "was added from imagination and often symbolizes eternity. Though now iconic, Van Gogh didn't "
+                        "think highly of the painting and called it a 'failure' in a letter to his brother.")
             elif mark_id == 84:
-                tts.say("Monet’s Water Lilies were not just paintings, but part of a grand vision, he planned them as a “peaceful refuge” and even arranged their display in a specially designed oval room at the Musee de l'Orangerie in Paris. He continued working on them despite nearly going blind from cataracts, which may have influenced the dreamy, blurred forms. Some panels stretch over six feet, making viewers feel as if they’re surrounded by water and light.")        
+                tts.say("Monet's Water Lilies were not just paintings, but part of a grand vision, he planned them as "
+                        "a 'peaceful refuge' and even arranged their display in a specially designed oval room at the "
+                        "Musee de l'Orangerie in Paris. He continued working on them despite nearly going blind from "
+                        "cataracts, which may have influenced the dreamy, blurred forms. Some panels stretch over six "
+                        "feet, making viewers feel as if they're surrounded by water and light.")
 
-        elif valence < 0.1 and valence > -0.1:
-            tts.post.say("You look indifferent. Please feel free to ask me any questions you have about this painting.")
+        elif 0.1 > attention > -0.1:
+            tts.say("You look indifferent. Please feel free to ask me any questions you have about this painting.")
 
         else:
-            tts.say("You don't look very interested in this painting. Say 'stay' to stay here to ask more questions, say 'move on' move on to the next exhibit, or say 'end' to end the showcase now")
+            tts.say("You don't look very interested in this painting. Say 'stay' to stay here to ask more questions, "
+                    "say 'move on' move on to the next exhibit, or say 'end' to end the showcase now")
 
         end = False
         move = False
