@@ -58,10 +58,6 @@ def zed_capture_image(num_exhibits):
             cv2.imwrite(filename, frame)
             print("Image saved!")
 
-            # Perform object detection on an image
-            img = cv2.imread(filename)
-            results = model(img)  # Predict on an image
-
             # Split and save vertical sections
             img = cv2.imread(filename)
             height, width, _ = img.shape
@@ -90,6 +86,7 @@ def zed_capture_image(num_exhibits):
                     occupied_exhibits += "1"
                     print(f"Person detected in Exhibit {i + 1}")
                 else:
+                    print(f"No one detected in Exhibit {i + 1}")
                     occupied_exhibits += "0"
 
 
@@ -102,14 +99,19 @@ def zed_capture_image(num_exhibits):
         return occupied_exhibits
 
 # === Metadata sender (Server ➝ NAO) ===
-def send_exhibits_occupied_metadata(occupied_exhibits):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect(("127.0.0.1", DETECTION_PORT))
-        s.sendall(occupied_exhibits.encode('utf-8'))
-        print("[Metadata] Sent to NAO:", occupied_exhibits)
+def send_exhibits_occupied_metadata(conn):
+    try:
+        occupied_exhibits = zed_capture_image(2)
+        if occupied_exhibits:
+            conn.sendall(occupied_exhibits.encode('utf-8'))
+            print("[Metadata] Sent to NAO:", occupied_exhibits)
+    except Exception as e:
+        print("Error during metadata handling:", e)
+    finally:
+        conn.close()
 
 # === Dialogue handler (NAO ⇄ Server) ===
-def handle_audio(conn, audio_file):
+def handle_audio(conn):
     recording, fs = speechReco_python3.record_audio(5)
     print(f"[Dialogue] Connected")
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -119,49 +121,34 @@ def handle_audio(conn, audio_file):
     #model_response = callLLM.query_llama(text)
     conn.sendall(text.encode('utf-8'))
     conn.close()
-    '''try:
-        # Receive audio
-        with open(filename, 'wb') as f:
-            while True:
-                data = conn.recv(1024) # receive audio_data var from listen_for_human response
-                if not data:
-                    break
-                f.write(data)
-        print("[Dialogue] Audio received")
-
-        # Transcribe
-        print("Loading Whisper model...")
-        # Check if GPU is available
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Using device: {device}")
-
-        model = whisper.load_model("tiny", device=device)
-        print("Converting speech to text...")
-        result = model.transcribe(os.getcwd() + "/" + audio_file, language="en")  # Specify English language for better accuracy
-        response_text = result["text"]
-        print(f"[Dialogue] Transcribed: {response_text}")
-
-        # Send response to LLM; not finished
-        llama_response = ""
-
-        # Send LLM response to NAO (listen_for_human_response's response variable)
-        conn.sendall(llama_response.encode('utf-8'))
-        conn.close()
-    except Exception as e:
-        print(f"Error during speech conversion: {str(e)}")
-        sys.exit(1)'''
 
 
-def start_server():
+def start_audio_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, AUDIO_PORT))
         s.listen(1)
         print(f"[Dialogue] Listening on port {AUDIO_PORT}...")
         while True:
             conn, addr = s.accept()
-            threading.Thread(target=handle_audio, args=(conn, addr)).start()
+            threading.Thread(target=handle_audio, args=(conn,)).start()
+
+def start_occupied_detector():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, DETECTION_PORT))
+        s.listen(1)
+        print(f"[Metadata] Listening on port {DETECTION_PORT}...")
+        while True:
+            conn, addr = s.accept()
+            threading.Thread(target=send_exhibits_occupied_metadata, args=(conn,)).start()
 
 
 if __name__ == "__main__":
-    threading.Thread(target=start_server).start()
+    threading.Thread(target=start_audio_server).start()
+    threading.Thread(target=start_occupied_detector).start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Shutting down servers.")
 

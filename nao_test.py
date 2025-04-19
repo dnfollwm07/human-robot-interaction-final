@@ -285,17 +285,11 @@ def introduction_markid(mark_id):
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
-    global occupied_exhibits
     s = socket.socket()
-    s.bind(('0.0.0.0', DETECTION_PORT))
-    s.listen(1)
-
-    print("[Metadata] Listening on port", DETECTION_PORT)
-    conn, addr = s.accept()
-    with conn:
-        print("[Metadata] Connected from", addr)
-        occupied_exhibits = conn.recv(1024) # A string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
-        print("[Metadata] Received:", occupied_exhibits)
+    s.connect(("127.0.0.1", DETECTION_PORT))
+    ret = s.recv(1024) # A string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
+    print("[Metadata] Received:", ret)
+    return ret
 
 
 # Get response from LLaMA model with conversation history
@@ -483,10 +477,11 @@ def tracker_face(robot_ip, port, tracking_duration=10):
     return valence, attention
 
 def main():
+    global occupied_exhibits
     #tts.say("Hello! Welcome to my museum! Allow me to show you around!")
     while True:
         motionProxy.wakeUp()
-        #postureProxy.goToPosture("StandInit", 0.5)
+        occupied_exhibits = listen_for_exhibit_status()
 
         # Step 1: Scan for NAO mark
         result = detect_naomark(ROBOT_IP, ROBOT_PORT)
