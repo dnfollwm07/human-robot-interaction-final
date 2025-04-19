@@ -355,7 +355,7 @@ def get_llm_response(user_input):
             if len(conversation_history) > 10:  # 5 exchanges (user + assistant)
                 conversation_history.pop(0)
                 conversation_history.pop(0)
-
+            print(response_text)
             return response_text
         else:
             return "I'm sorry, I couldn't process your request properly."
