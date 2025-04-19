@@ -501,13 +501,13 @@ def main():
 
         if valence >= 0.1:
             tts.post.say("You look quite interested in this exhibit! I'll explain to you some more history about this painting.")
-            response = get_llm_response("Respond with some detailed history about the painting Starry Night or Van Gogh.", False)
-            tts.say(response)
+            if mark_id == 80:
+                tts.say("The Starry Night shows Van Gogh’s early move toward expressionism, using bold forms to convey emotion rather than realism. The cypress tree, not seen from his window, was added from imagination and often symbolizes eternity. Though now iconic, Van Gogh didn’t think highly of the painting and called it a “failure” in a letter to his brother.")
+            elif mark_id == 84:
+                tts.say("Monet’s Water Lilies were not just paintings, but part of a grand vision, he planned them as a “peaceful refuge” and even arranged their display in a specially designed oval room at the Musee de l'Orangerie in Paris. He continued working on them despite nearly going blind from cataracts, which may have influenced the dreamy, blurred forms. Some panels stretch over six feet, making viewers feel as if they’re surrounded by water and light.")        
 
         elif valence < 0.1 and valence > -0.1:
-            tts.post.say("You look indifferent. Let me tell you some interesting facts about this painting. ")
-            response = get_llm_response("Respond with some facts about Van Gogh's The Starry Night", False)
-            tts.say(response)
+            tts.post.say("You look indifferent. Please feel free to ask me any questions you have about this painting.")
 
         else:
             tts.say("You don't look very interested in this painting. Say 'stay' to stay here to ask more questions, say 'move on' move on to the next exhibit, or say 'end' to end the showcase now")
