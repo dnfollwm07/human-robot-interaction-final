@@ -81,11 +81,7 @@ def query_llama(prompt):
 def test_conversation():
     # Test questions
     questions = [
-        "Can you tell me about the museum?",
-        "What exhibits do you have?",
-        "Can you tell me more about the Starry Night painting?",
-        "When was the Mona Lisa painted?",
-        "Thank you for your help!"
+        "Respond with some detailed history about Starry Night or Van Gogh."
     ]
     
     print("Starting museum guide conversation test...\n")

@@ -4,6 +4,7 @@ import random
 
 from inaoqi import ALMemoryProxy
 from naoqi import ALProxy
+import qi
 import time
 import math
 import sys
@@ -32,6 +33,7 @@ motionProxy = ALProxy("ALMotion", ROBOT_IP, ROBOT_PORT)
 postureProxy = ALProxy("ALRobotPosture", ROBOT_IP, ROBOT_PORT)
 life = ALProxy("ALAutonomousLife", ROBOT_IP, ROBOT_PORT)
 emotion_proxy = ALProxy("ALMood", ROBOT_IP, ROBOT_PORT)
+
 life.setState("disabled")
 
 DETECTION_PORT = 5001
@@ -252,15 +254,17 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
     print(x, y, theta)
     frequency = 0.1
 
+    time.sleep(3)
+
     motion.moveTo(x * 0.6, y, theta)#, [["Frequency", frequency]])
 
-    while True:
+    '''while True:
         current_pos = motion.getRobotPosition(False)
         dx = current_pos[0] - start_pos[0]
         dy = current_pos[1] - start_pos[1]
         dist = math.hypot(dx, dy)
         if dist >= 0.4:
-            break
+            break'''
     time.sleep(0.1)
 
     motion.stopMove()
@@ -271,13 +275,13 @@ def move_to_naomark(robot_ip, port, alpha, beta, width):
 def introduction_markid(mark_id):
     # banana
     if mark_id == 84:
-        tts.say("Test 1 text!!!!!")
-        #tts.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
+        #tts.say("Test 1 text!!!!!")
+        tts.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
 
     # grape
     elif mark_id == 80:
-        tts.say("Test 2 text!!!!!")
-        #tts.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
+        tts.say("This is Starry Night. Blah blah blah blah.")
+        #.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
@@ -295,7 +299,7 @@ def listen_for_exhibit_status():
 
 
 # Get response from LLaMA model with conversation history
-def get_llm_response(user_input):
+def get_llm_response(user_input, use_history=True):
     try:
         # Prepare the prompt with conversation history and role
         system_prompt = """You are a museum guide robot interacting with a human visitor.
@@ -303,11 +307,13 @@ def get_llm_response(user_input):
             Behavior Rules:
             - Only respond with information about the two artworks listed below.
             - Do NOT mention any artworks, locations, or artists not listed.
-            - Do NOT create fictional artworks or speculate.
+            - Do NOT create anything fictional or speculate.
             - Answer directly and concisely. Keep it factual and on-topic.
             - Use a neutral, professional tone - avoid overly friendly or emotional responses.
             - Do NOT say "Guide:" or narrate your own actions.
             - Do NOT greet or say goodbye unless specifically asked.
+            - Respond with plain text. 
+            - Do NOT use special/unicode characters in your response.
 
             Exhibit 1: *Water Lilies* by Claude Monet  
             - A series of around 250 paintings created between 1897 and 1926  
@@ -315,7 +321,6 @@ def get_llm_response(user_input):
             - Painted outdoors to capture natural light and color changes throughout the day  
             - Known for soft, layered brushstrokes and a dreamy, abstracted sense of reflection  
             - No human figures are present - focus is entirely on water, light, and nature  
-            - Several major pieces are housed in Musee de l'Orangerie, Paris
 
             Exhibit 2: *The Starry Night* by Vincent van Gogh  
             - Painted in June 1889  
@@ -324,12 +329,11 @@ def get_llm_response(user_input):
             - Features a swirling night sky over a quiet village with a cypress tree  
             - Known for dynamic brushstrokes and vibrant blue-and-yellow contrast  
             - Painted from memory, not direct observation  
-            - Housed in the Museum of Modern Art (MoMA), New York  
  
         """
         
         # Format the current prompt only, without conversation history
-        full_prompt = system_prompt + "\n\nVisitor: " + user_input + "\nGuide:"
+        full_prompt = system_prompt + "\n\nVisitor: " + user_input + "\nGuide:" if use_history else user_input
 
         data = {
             "prompt": full_prompt,
@@ -355,8 +359,8 @@ def get_llm_response(user_input):
             if len(conversation_history) > 10:  # 5 exchanges (user + assistant)
                 conversation_history.pop(0)
                 conversation_history.pop(0)
-            print(response_text)
-            return response_text
+            print(response_text, type(response_text))
+            return str(response_text)
         else:
             return "I'm sorry, I couldn't process your request properly."
 
@@ -432,7 +436,7 @@ def tracker_face(robot_ip, port, tracking_duration=10):
             time.sleep(1.0)  # Wait for head to reach position
             
             # Check if face is detected
-            if tracker.isTargetLost() == False:
+            if not tracker.isTargetLost():
                 print("Face detected at yaw:", yaw, "pitch:", pitch)
                 face_detected = True
                 break
@@ -475,10 +479,10 @@ def tracker_face(robot_ip, port, tracking_duration=10):
     return valence, attention
 
 def main():
-    tts.say("Hello! Welcome to my museum! Allow me to show you around!")
+    #tts.say("Hello! Welcome to my museum! Allow me to show you around!")
     while True:
         motionProxy.wakeUp()
-        postureProxy.goToPosture("StandInit", 0.5)
+        #postureProxy.goToPosture("StandInit", 0.5)
 
         # Step 1: Scan for NAO mark
         result = detect_naomark(ROBOT_IP, ROBOT_PORT)
@@ -491,28 +495,41 @@ def main():
         move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)
         
         # Step 3: Give introduction
-        introduction_markid(mark_id)
+        motionProxy.moveTo(0, 0, 3.14)
+        introduction_markid(80)
         
         # Step 4: Ask for questions
         life.setState("solitary")
         time.sleep(2)
         valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
-        tts.say("Please feel free to ask any questions! If you have no questions, please say nothing. ")
+        #tts.say("Please feel free to ask any questions! If you have no questions, please say nothing. ")
 
         if valence >= 0.1:
-            tts.say("You look quite interested in this exhibit! I'll explain to you some more history about this painting.")
+            tts.post.say("You look quite interested in this exhibit! I'll explain to you some more history about this painting.")
+            response = get_llm_response("Respond with some detailed history about the painting Starry Night or Van Gogh.", False)
+            tts.say(response)
 
         elif valence < 0.1 and valence > -0.1:
-            tts.say("If you have any questions, please feel free.")
-        else:
-            tts.say("You don't look very interested in this painting. Would you like to move on or end the showcase now?")
+            tts.post.say("You look indifferent. Let me tell you some interesting facts about this painting. ")
+            response = get_llm_response("Respond with some facts about Van Gogh's The Starry Night", False)
+            tts.say(response)
 
-        # Step 5-7: Listen for questions and respond
+        else:
+            tts.say("You don't look very interested in this painting. Say 'stay' to stay here to ask more questions, say 'move on' move on to the next exhibit, or say 'end' to end the showcase now")
+
+        end = False
+        move = False
         trial = 0
         while trial < 5:
             # Listen for exhibit status and get LLM response
             recording = listen_for_human_response()
-            if recording == "" or "nothing" in recording.lower():
+            if "end" in recording.lower():
+                end = True
+                break
+            if "stay" in recording.lower():
+                continue
+            if "move on" in recording.lower():
+                move = True
                 break
             # Get and speak LLM response
             # response = get_llm_response_temp(trial + 1, mark_id)
@@ -521,22 +538,18 @@ def main():
             trial += 1
 
 
-        # Step 8: Ask if they want to visit next exhibit
-        if len(detected_exhibit_ids) == len(TOTAL_EXHIBIT_IDS):
-            tts.say("You have viewed all of the museum. I hope you enjoyed your visit!")
-        else:
-            tts.say("Do you want to visit the next exhibit?")
-        # Listen for response
-        response = listen_for_human_response()
+            # Step 8: Ask if they want to visit next exhibit
+            if move:
+                if len(detected_exhibit_ids) == len(TOTAL_EXHIBIT_IDS):
+                    tts.say("You have viewed all of the museum. I hope you enjoyed your visit!")
+                    return
+                break
+            elif end:
+                tts.say("Thanks for your visit today! Have a great rest of your day.")
+                return
+            else:
+                tts.say("I didn't understand. Please ask a question!")
 
-        # Step 9-10: Check if they want to continue
-        if "yes" in response.lower():
-            continue  # Continue to next exhibit
-        elif "no" in response.lower():
-            tts.say("Thanks for your visit today")
-            return  # End the program
-        else:
-            tts.say("I didn't understand. Please say yes or no.")
 
 if __name__ == "__main__":
     main()
