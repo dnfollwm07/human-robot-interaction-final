@@ -143,12 +143,12 @@ def start_occupied_detector():
 
 
 if __name__ == "__main__":
-    threading.Thread(target=start_audio_server).start()
-    threading.Thread(target=start_occupied_detector).start()
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Shutting down servers.")
+    audio_thread = threading.Thread(target=start_audio_server)
+    occupied_thread = threading.Thread(target=start_occupied_detector)
+    audio_thread.start()
+    occupied_thread.start()
+    
+    # Block main from exiting by joining the server threads
+    audio_thread.join()
+    occupied_thread.join()
 
