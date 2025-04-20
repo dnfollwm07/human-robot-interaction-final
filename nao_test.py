@@ -18,7 +18,7 @@ ROBOT_PORT = 9559
 FILENAME = "/home/nao/recordings/interaction.wav"
 
 # LLaMA service configuration
-LLAMA_URL = "http://192.168.1.22:8080/completion"  # TODO: @Liam change to your IP address
+LLAMA_URL = "http://192.168.1.22:8080/completion" 
 LLAMA_HEADERS = {"Content-Type": "application/json"}
 
 # Store conversation history
@@ -408,7 +408,7 @@ def main():
         while trial < 5:
             user_input = listen_for_human_response().decode("utf-8").strip()
 
-            if "end" in user_input.lower():
+            if "end" in user_input.lower().split():
                 end = True
                 break
             elif "move on" in user_input.lower():

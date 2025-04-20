@@ -107,8 +107,7 @@ def send_exhibits_occupied_metadata(conn):
             print("[Metadata] Sent to NAO:", occupied_exhibits)
     except Exception as e:
         print("Error during metadata handling:", e)
-    finally:
-        conn.close()
+    #conn.close()
 
 # === Dialogue handler (NAO ⇄ Server) ===
 def handle_audio(conn):
@@ -120,7 +119,7 @@ def handle_audio(conn):
     text = speechReco_python3.transcribe_audio(data)
     #model_response = callLLM.query_llama(text)
     conn.sendall(text.encode('utf-8'))
-    conn.close()
+    #conn.close()
 
 
 def start_audio_server():
