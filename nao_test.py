@@ -2,7 +2,7 @@ import datetime
 import os
 import socket
 import random
-
+import threading
 from inaoqi import ALMemoryProxy
 from naoqi import ALProxy
 import qi
@@ -155,16 +155,16 @@ def introduction_markid(mark_id):
 
 
     if mark_id == 84:
-        tts.post.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
+        tts.say("This painting is part of Claude Monet's Water Lilies series, created between 1897 and 1926. It captures the surface of a pond in his garden at Giverny, focusing on water lilies, reflections, and the shifting effects of light. Monet painted outdoors to observe how color changed throughout the day. The absence of a horizon or human presence emphasizes the immersive and abstract quality of the scene.")
 
     # grape
     elif mark_id == 80:
-        tts.post.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
+        tts.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
 
     life.setState("solitary")
     time.sleep(2)
-    valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
-    return attention
+    # valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
+    # return attention
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
@@ -330,6 +330,38 @@ def tracker_face(robot_ip, port, tracking_duration=10):
     
     return valence, attention
 
+# Function to continuously monitor person's state
+def continuous_monitor_state(stop_event, attention_list):
+    tracker = ALProxy("ALTracker", ROBOT_IP, ROBOT_PORT)
+    try:
+        tracker.registerTarget("Face", 0.1)
+        tracker.track("Face")
+        print("Continuous tracking started")
+        
+        while not stop_event.is_set():
+            try:
+                if not tracker.isTargetLost():
+                    emotion_data = emotion_proxy.currentPersonState()
+                    valence = emotion_data[0][1][0][1]
+                    attention = emotion_data[1][1][0][1]
+                    attention_list.append(attention)
+                    print(f"Continuous monitoring - Valence: {valence}, Attention: {attention}")
+                    attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
+                time.sleep(5)  # Wait for 5 seconds before next check
+            except Exception as e:
+                print(f"Error in continuous monitoring: {e}")
+                time.sleep(5)  # Continue even if there's an error
+                
+    except Exception as e:
+        print(f"Error setting up continuous monitoring: {e}")
+    finally:
+        try:
+            tracker.stopTracker()
+            tracker.unregisterAllTargets()
+            print("Continuous tracking stopped")
+        except:
+            pass
+
 def set_home_position():
     life.setState("solitary")
     localization.learnHome()
@@ -379,9 +411,19 @@ def main():
         
         # Step 3: Give introduction
         motionProxy.moveTo(0, 0, 3.14)
-        attention = introduction_markid(mark_id)
-        attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
-        # Step 4: Ask for questions
+        
+        # Start continuous monitoring in a separate thread
+        stop_monitoring = threading.Event()
+        attention_measurements = []
+        monitor_thread = threading.Thread(
+            target=continuous_monitor_state, 
+            args=(stop_monitoring, attention_measurements)
+        )
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        # Initial introduction and attention measurement
+        introduction_markid(mark_id)        
 
         # Respond based on attention level
         if attention >= 0.1:
@@ -434,11 +476,31 @@ def main():
 
         # Handle post-interaction decision
         if move:
+             # Stop monitoring
+            stop_monitoring.set()
+            monitor_thread.join(timeout=2)
+            # print(attention_records)
+            
+            # # Calculate average attention if we have measurements
+            # if attention_measurements:
+            #     avg_attention = sum(attention_measurements) / len(attention_measurements)
+            #     print(f"Average attention during introduction: {avg_attention}")
+            #     attention = avg_attention
             navigate_to_home()
             if len(detected_exhibit_ids) == len(TOTAL_EXHIBIT_IDS):
                 tts.say("You've now seen everything in the museum. I hope you enjoyed your visit!")
                 return
         elif end:
+             # Stop monitoring
+            stop_monitoring.set()
+            monitor_thread.join(timeout=2)
+            # print(attention_records)
+            
+            # # Calculate average attention if we have measurements
+            # if attention_measurements:
+            #     avg_attention = sum(attention_measurements) / len(attention_measurements)
+            #     print(f"Average attention during introduction: {avg_attention}")
+            #     attention = avg_attention
             tts.say("Thanks for your visit today! Have a wonderful day.")
             navigate_to_home()
             return
