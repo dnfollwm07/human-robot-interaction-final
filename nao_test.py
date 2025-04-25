@@ -1,3 +1,4 @@
+import datetime
 import os
 import socket
 import random
@@ -18,11 +19,13 @@ ROBOT_PORT = 9559
 FILENAME = "/home/nao/recordings/interaction.wav"
 
 # LLaMA service configuration
-LLAMA_URL = "http://192.168.1.22:8080/completion" 
+LLAMA_URL = "http://192.168.1.22:8080/completion"  # TODO: @Liam change to your IP address
 LLAMA_HEADERS = {"Content-Type": "application/json"}
 
 # Store conversation history
 conversation_history = []
+
+attention_records = []
 
 tts = ALProxy("ALTextToSpeech", ROBOT_IP, ROBOT_PORT)
 recorder = ALProxy("ALAudioRecorder", ROBOT_IP, ROBOT_PORT)
@@ -93,9 +96,9 @@ def detect_naomark(robot_ip, port):
                 print("mark ID:", mark_id)
                 if mark_id not in detected_exhibit_ids and str(mark_id) not in occupied_exhibits:
                     if mark_id == 80 and occupied_exhibits[0] == '0':
-                        tts.say("Let's check out the Van Gogh!")
+                        tts.say("It seems the Van Gogh is empty, let's check it out!")
                     elif mark_id == 84 and occupied_exhibits[1] == '0':
-                        tts.say("Why don't we go to the Monet?")
+                        tts.say("Why don't we go to the Monet? No one is there. ")
                     detected_exhibit_ids.append(mark_id)
                     landMarkProxy.unsubscribe("Test_LandMark")
 
@@ -156,8 +159,7 @@ def introduction_markid(mark_id):
 
     # grape
     elif mark_id == 80:
-        tts.post.say("This is Starry Night. Blah blah blah blah.")
-        #.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
+        tts.post.say("The Starry Night was painted by Vincent van Gogh in June 1889 while he was staying at an asylum in Saint-Remy-de-Provence. It depicts a swirling night sky over a quiet village, with exaggerated forms and vibrant colors. The painting reflects Van Gogh's emotional state and his unique use of brushwork and color. It was based not on a direct view, but a combination of memory and imagination!")
 
     life.setState("solitary")
     time.sleep(2)
@@ -166,10 +168,12 @@ def introduction_markid(mark_id):
 
 # listens for metadata from python3main.py to see if any exhibits are occupied
 def listen_for_exhibit_status():
+    tts.post.say("Let's see if any exhibits are empty...")
     s = socket.socket()
-    s.connect(("127.0.0.1", DETECTION_PORT))
+    s.connect(("localhost", DETECTION_PORT))
     ret = s.recv(1024) # A string of n ints where n= # of exhibits; e.g. data[0]="0" means the first exhibit is not occupied
     print("[Metadata] Received:", ret)
+    s.close()
     return ret
 
 
@@ -250,9 +254,10 @@ def get_llm_response(user_input, mark_id):
 def listen_for_human_response():
     # Listening for reply from handle_audio
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", AUDIO_PORT))
+    s.connect(("localhost", AUDIO_PORT))
     response = s.recv(1024) # perhaps 1024 bytes is not enough for text from the llm
     print("[Dialogue] Response:", response)
+    tts.post.say("Hmm, let me think...")
     s.close()
     return response
 
@@ -309,7 +314,7 @@ def tracker_face(robot_ip, port, tracking_duration=10):
         while True:
             time.sleep(1)
             if tracker.isNewTargetDetected():
-                tts.say("New target detected")
+                #tts.say("New target detected")
                 emotion_data = emotion_proxy.currentPersonState()  # dict
                 valence = emotion_data[0][1][0][1]
                 attention = emotion_data[1][1][0][1]
@@ -375,7 +380,7 @@ def main():
         # Step 3: Give introduction
         motionProxy.moveTo(0, 0, 3.14)
         attention = introduction_markid(mark_id)
-        
+        attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
         # Step 4: Ask for questions
 
         # Respond based on attention level
@@ -398,8 +403,9 @@ def main():
 
         else:
             tts.say(
-                "You don't look very interested. If you'd like to move on, just say 'move on', or 'end' to finish your visit.")
+                "You don't look very interested.")
 
+        tts.say("Say 'move on' to go to the next exhibit, or 'end' to wrap the whole visit up.")
         # Start interactive Q&A loop
         end = False
         move = False
@@ -417,10 +423,14 @@ def main():
             else:
                 response = get_llm_response(user_input, mark_id)
                 tts.say(response)
+
                 trial += 1
                 if trial < 5:
                     tts.say("Any more questions?"
-                            "Say 'move on' to go to the next exhibit, or 'end' to wrap it up.")
+                            "Say 'move on' to go to the next exhibit, or 'end' to wrap the whole visit up.")
+
+        valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
+        attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
 
         # Handle post-interaction decision
         if move:
@@ -436,3 +446,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print(attention_records)

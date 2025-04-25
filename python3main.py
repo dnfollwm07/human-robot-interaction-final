@@ -16,7 +16,7 @@ import speechReco_python3
 from ultralytics import YOLO
 
 # Setup socket
-HOST = '127.0.0.1'
+HOST = 'localhost'
 DETECTION_PORT = 5001
 AUDIO_PORT = 5002
 
@@ -94,8 +94,6 @@ def zed_capture_image(num_exhibits):
         print(f"An error occurred: {e}")
 
     finally:
-        print("Closing camera")
-        zed.close()
         return occupied_exhibits
 
 # === Metadata sender (Server ➝ NAO) ===
@@ -107,7 +105,8 @@ def send_exhibits_occupied_metadata(conn):
             print("[Metadata] Sent to NAO:", occupied_exhibits)
     except Exception as e:
         print("Error during metadata handling:", e)
-    #conn.close()
+    finally:
+        conn.close()
 
 # === Dialogue handler (NAO ⇄ Server) ===
 def handle_audio(conn):
@@ -119,7 +118,7 @@ def handle_audio(conn):
     text = speechReco_python3.transcribe_audio(data)
     #model_response = callLLM.query_llama(text)
     conn.sendall(text.encode('utf-8'))
-    #conn.close()
+    conn.close()
 
 
 def start_audio_server():
@@ -150,4 +149,7 @@ if __name__ == "__main__":
     # Block main from exiting by joining the server threads
     audio_thread.join()
     occupied_thread.join()
+
+    zed.close()
+
 
