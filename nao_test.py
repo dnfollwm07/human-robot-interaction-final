@@ -281,61 +281,42 @@ def tracker_face(robot_ip, port, tracking_duration=10):
     
     # Scan for faces by moving head
     face_detected = False
-    for pitch in head_pitch_positions:
-        if face_detected:
-            break
-        for yaw in head_yaw_positions:
-            motion.setAngles("HeadYaw", yaw, 0.3)
-            motion.setAngles("HeadPitch", pitch, 0.2)
-            time.sleep(1.0)  # Wait for head to reach position
-            
-            # Check if face is detected
-            if not tracker.isTargetLost():
-                print("Face detected at yaw:", yaw, "pitch:", pitch)
-                face_detected = True
+    while not face_detected:
+        for pitch in head_pitch_positions:
+            if face_detected:
                 break
-    
-    # If no face detected after scanning
-    if not face_detected:
-        print("No face detected during scan")
-        tracker.stopTracker()
-        tracker.unregisterAllTargets()
-        # Reset head position
-        motion.setAngles("HeadYaw", original_head_yaw, 0.2)
-        motion.setAngles("HeadPitch", original_head_pitch, 0.2)
-        motion.setStiffnesses("Head", 0.0)
-        return valence, attention
-    
+            for yaw in head_yaw_positions:
+                motion.setAngles("HeadYaw", yaw, 0.3)
+                motion.setAngles("HeadPitch", pitch, 0.2)
+                time.sleep(1.0)  # Wait for head to reach position
+
+                # Check if face is detected
+                if not tracker.isTargetLost():
+                    print("Face detected at yaw:", yaw, "pitch:", pitch)
+                    face_detected = True
+                    break
+
+        # If no face detected after scanning
+        if not face_detected:
+            print("No face detected during scan")
+            tracker.stopTracker()
+            tracker.unregisterAllTargets()
+            # Reset head position
+            motion.setAngles("HeadYaw", original_head_yaw, 0.2)
+            motion.setAngles("HeadPitch", original_head_pitch, 0.2)
+            motion.setStiffnesses("Head", 0.0)
+
     # Start tracking the detected face
     tracker.track("Face")
     print("Start tracking face")
 
-    try:
-        while True:
-            time.sleep(1)
-            if tracker.isNewTargetDetected():
-                #tts.say("New target detected")
-                emotion_data = emotion_proxy.currentPersonState()  # dict
-                valence = emotion_data[0][1][0][1]
-                attention = emotion_data[1][1][0][1]
-                print("Valence:", valence, "Attention:", attention)
-                break
+    return tracker
 
-    except KeyboardInterrupt:
-        print("Stopping...")
-
-    tracker.stopTracker()
-    tracker.unregisterAllTargets()
-    print("Stop tracking")
-    
-    return valence, attention
 
 # Function to continuously monitor person's state
 def continuous_monitor_state(stop_event, attention_list):
-    tracker = ALProxy("ALTracker", ROBOT_IP, ROBOT_PORT)
     try:
-        tracker.registerTarget("Face", 0.1)
-        tracker.track("Face")
+        tracker = tracker_face(ROBOT_IP, AUDIO_PORT)
         print("Continuous tracking started")
         
         while not stop_event.is_set():
@@ -345,15 +326,15 @@ def continuous_monitor_state(stop_event, attention_list):
                     valence = emotion_data[0][1][0][1]
                     attention = emotion_data[1][1][0][1]
                     attention_list.append(attention)
-                    print(f"Continuous monitoring - Valence: {valence}, Attention: {attention}")
-                    attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
+                    print("Continuous monitoring - Valence: " + valence + ", Attention: " + attention)
+                    attention_records.append([datetime.datetime.now(), valence, attention])
                 time.sleep(5)  # Wait for 5 seconds before next check
             except Exception as e:
-                print(f"Error in continuous monitoring: {e}")
+                print("Error in continuous monitoring: " + str(e))
                 time.sleep(5)  # Continue even if there's an error
                 
     except Exception as e:
-        print(f"Error setting up continuous monitoring: {e}")
+        print("Error in continuous monitoring: " + str(e))
     finally:
         try:
             tracker.stopTracker()
@@ -391,7 +372,7 @@ def main():
     # Initialize Location
     
     time.sleep(2)
-    set_home_position()
+    #set_home_position()
     
     global occupied_exhibits
     tts.say("Hello and welcome to my museum! Allow me to show you around!")
@@ -424,7 +405,7 @@ def main():
         
         # Initial introduction and attention measurement
         introduction_markid(mark_id)        
-
+        attention = attention_records[-1][2]
         # Respond based on attention level
         if attention >= 0.1:
             tts.say("You look quite interested in this exhibit! Let me share more history with you.")
@@ -471,8 +452,8 @@ def main():
                     tts.say("Any more questions?"
                             "Say 'move on' to go to the next exhibit, or 'end' to wrap the whole visit up.")
 
-        valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
-        attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
+        #valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
+        #attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
 
         # Handle post-interaction decision
         if move:
