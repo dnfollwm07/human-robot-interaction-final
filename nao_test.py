@@ -2,6 +2,7 @@ import datetime
 import os
 import socket
 import random
+import string
 import threading
 from inaoqi import ALMemoryProxy
 from naoqi import ALProxy
@@ -423,7 +424,7 @@ def main():
         print(attention_measurements)
         if len(attention_records) > 0:
             attention = attention_records[-1][2]
-            if attention >= 0.8:
+            if attention >= 0.7:
                 tts.say("You look quite interested in this exhibit! Let me share more history with you.")
                 if mark_id == 80:
                     tts.say("The Starry Night shows Van Gogh's early move toward expressionism, using bold forms to "
@@ -439,7 +440,7 @@ def main():
                         "viewers in water and light.")
                     tts.say("Feel free to ask any questions about this painting.")
 
-            elif 0.5 <= attention < 0.8:
+            elif 0.4 <= attention < 0.7:
                 tts.say("You seem a bit indifferent. That's okay! Feel free to ask any questions about this painting.")
 
             else:
@@ -447,7 +448,7 @@ def main():
                     "You don't look very interested.")
         else:
             tts.say("You seem a bit indifferent. That's okay! Feel free to ask any questions about this painting.")
-        tts.say("Say 'move on' to go to the next exhibit, or 'end' to wrap the whole visit up.")
+        tts.say("Say 'move on' to go to another exhibit, or 'stop' to wrap the whole visit up.")
         # Start interactive Q&A loop
         end = False
         move = False
@@ -456,7 +457,11 @@ def main():
         while True:
             user_input = listen_for_human_response().decode("utf-8").strip()
 
-            if "end" in user_input.lower().split():
+            tokens = user_input.lower().split()
+            # strip out punctuation on each token
+            tokens = [t.strip(string.punctuation) for t in tokens]
+
+            if "stop" in tokens:
                 end = True
                 break
             elif "move on" in user_input.lower():
@@ -484,7 +489,7 @@ def main():
             else:
                 tts.say(
                     "You seem a bit indifferent. That's okay! Feel free to ask any questions about this painting.")
-            tts.say("Alternatively, say 'move on' to go to the next exhibit, or 'end' to wrap the whole visit up.")
+            tts.say("Alternatively, say 'move on' to go to another exhibit, or 'stop' to wrap the whole visit up.")
 
         #valence, attention = tracker_face(ROBOT_IP, ROBOT_PORT)
         #attention_records.append(str(datetime.datetime.now()) + ": " + str(attention))
