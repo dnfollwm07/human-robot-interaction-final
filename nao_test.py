@@ -386,7 +386,7 @@ def main():
     # Initialize Location
     
     time.sleep(2)
-    #set_home_position()
+    set_home_position()
     
     global occupied_exhibits
     tts.say("Hello and welcome to my museum! Allow me to show you around!")
@@ -405,7 +405,7 @@ def main():
         move_to_naomark(ROBOT_IP, ROBOT_PORT, alpha, beta, width)
         
         # Step 3: Give introduction
-        motionProxy.moveTo(0, 0, 3.14)
+        motionProxy.moveTo(0, 0, 2.5)
         
         # Start continuous monitoring in a separate thread
         stop_monitoring = threading.Event()
@@ -473,14 +473,14 @@ def main():
 
             if len(attention_records) > 0:
                 attention = attention_records[-1][2]
-                if attention >= 0.1:
+                if attention >= 0.7:
                     tts.say("You look quite interested in this exhibit!")
                     if mark_id == 80:
                         tts.say("Anything else you want to know about The Starry Night?")
                     elif mark_id == 84:
                         tts.say("Anything else you want to know about this Monet?")
 
-                elif -0.1 <= attention < 0.1:
+                elif 0.4 <= attention < 0.7:
                     tts.say(
                         "You seem a bit indifferent. No problem! Feel free to ask anything about this painting.")
 
